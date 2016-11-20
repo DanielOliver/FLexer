@@ -5,6 +5,9 @@ type [<RequireQualifiedAccess>] Keyword =
   | Let
   | False
   | True
+  | If
+  | Else
+  | Then
 
 type [<RequireQualifiedAccess>] Operator =
   | EqualTo
@@ -14,6 +17,7 @@ type [<RequireQualifiedAccess>] Operator =
   | LessThanOrEqualTo
   | Multiply
   | Divide
+  | Assign
 
 type [<RequireQualifiedAccess>] Punctuation =
   | OpenCurlyBracket
@@ -40,6 +44,9 @@ let rules =
   [ Rule.Literal("let", fun _ -> TokenType.Keyword(Keyword.Let))
     Rule.Literal("true", fun _ -> TokenType.Keyword(Keyword.True))
     Rule.Literal("false", fun _ -> TokenType.Keyword(Keyword.False))
+    Rule.Literal("if", fun _ -> TokenType.Keyword(Keyword.If))
+    Rule.Literal("else", fun _ -> TokenType.Keyword(Keyword.Else))
+    Rule.Literal("then", fun _ -> TokenType.Keyword(Keyword.Then))
 
     Rule.Regex(@"[0-9]+[.][0-9]+", System.Decimal.Parse >> TokenType.Decimal)
     Rule.Regex(@"[0-9]+", System.Int32.Parse >> TokenType.Integer)
@@ -55,7 +62,8 @@ let rules =
     Rule.Literal(")", fun _ -> TokenType.Punctuation Punctuation.CloseParentheses)
     Rule.Literal(";", fun _ -> TokenType.Punctuation Punctuation.SemiColon)
 
-    Rule.Literal("=", fun _ -> TokenType.Operator Operator.EqualTo)
+    Rule.Literal("=", fun _ -> TokenType.Operator Operator.Assign)
+    Rule.Literal("==", fun _ -> TokenType.Operator Operator.EqualTo)
     Rule.Literal(">", fun _ -> TokenType.Operator Operator.GreaterThan)
     Rule.Literal("<", fun _ -> TokenType.Operator Operator.LessThan)
     Rule.Literal(">=", fun _ -> TokenType.Operator Operator.GreaterThanOrEqualTo)
@@ -71,6 +79,9 @@ let rules =
 
 let example = "
 let Four = 5.0;
+let Method(param: int): bool {
+  if (param == 0) then { true; } else { false; }
+}
 "
 
 [<EntryPoint>]
@@ -78,7 +89,7 @@ let main argv =
   let tokens = Tokenize rules example
 
   for i in tokens do
-    printfn "%A" i
+    printfn "%A" i.TokenType
 
   System.Console.Read() |> ignore
   0 // return an integer exit code
