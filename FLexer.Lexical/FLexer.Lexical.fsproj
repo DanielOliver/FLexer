@@ -43,6 +43,7 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Automata.fs" />
     <Compile Include="Tokenizer.fs" />
   </ItemGroup>
   <PropertyGroup>
