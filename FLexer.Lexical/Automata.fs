@@ -16,18 +16,16 @@ type Automata =
   | OneOrMoreGreedy of Automata
   | ZeroOrMoreGreedy of Automata
 
-type AutomataState<'m> = 
+type private AutomataState<'m> = 
   { Mode : 'm list
     Remaining : char list
     Taken : int
     Offset : int }
 
 [<RequireQualifiedAccess>]
-type AutomataResult<'m> = 
+type private AutomataResult<'m> = 
   | Success of Taken : int * State : AutomataState<'m>
   | Failure of Error : string
-
-type Acceptor<'m> = AutomataState<'m> -> AutomataResult<'m>
 
 [<RequireQualifiedAccess>]
 type RuleType = 
@@ -64,7 +62,7 @@ type EngineFailure =
   | AutomataMismatch
 
 [<RequireQualifiedAccess>]
-type EngineMatch<'m, 't> = 
+type private EngineMatch<'m, 't> = 
   | Success of Token<'m,'t> * AutomataState<'m>
   | Failure of EngineFailure
 
