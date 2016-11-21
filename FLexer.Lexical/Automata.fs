@@ -17,7 +17,7 @@ type Automata =
   | ZeroOrMoreGreedy of Automata
 
 type AutomataState<'m> = 
-  { Mode : 'm
+  { Mode : 'm list
     Remaining : char list
     Taken : int
     Offset : int }
@@ -109,11 +109,17 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
           Token.Text = tokenText
           Token.TokenType = rule.Mapper tokenText }
       
-      let newState = { newState with Offset = newState.Offset + newState.Taken }
+      let nextMode =
+        match rule.RuleAction with
+        | Some(RuleAction.PushMode(x)) -> x :: state.Mode
+        | Some(RuleAction.PopMode) -> state.Mode.Tail
+        | _ -> state.Mode
+
+      let newState = { newState with Offset = newState.Offset + newState.Taken; Mode = nextMode }
       EngineMatch.Success(tokenResult, newState)
   
   let nextToken (state : AutomataState<'m>) = 
-    match orderLookup.TryFind state.Mode with
+    match orderLookup.TryFind state.Mode.Head with
     | Some(rules) -> 
       let rec evaluateNextRule (remainingRules : Rule<'m, 't> list) = 
         match remainingRules with
@@ -135,7 +141,7 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
         | EngineMatch.Failure(fail) -> EngineResult.Failure(tokens |> List.rev, fail)
     readToken { Offset = 0
                 Remaining = text |> Seq.toList
-                Mode = initialmode
+                Mode = [ initialmode ]
                 Taken = 0 } []
   
   member this.ID0 = nameLookup
