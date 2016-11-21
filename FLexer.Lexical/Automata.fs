@@ -47,12 +47,21 @@ type Rule<'m, 't> =
     Automata : Automata
     Order : int
     ID : int }
+  static member From mode mapper ruleAction name automata order id = 
+    { Mode = mode
+      Mapper = mapper
+      RuleAction = ruleAction
+      Name = name
+      Automata = automata
+      Order = order
+      ID = id }
 
 [<RequireQualifiedAccess>]
 type EngineFailure = 
   | EOF
   | UnknownMode
   | NoMatchingRule
+  | AutomataMismatch
 
 [<RequireQualifiedAccess>]
 type EngineMatch<'m, 't> = 
@@ -91,7 +100,15 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
          |> Seq.toList)
     |> Map.ofSeq
   
-  let evaluateAutomata (automata : Automata) (state : AutomataState<'m>) = AutomataMatch.Success state
+  let evaluateAutomata (automata : Automata) (state : AutomataState<'m>) = 
+    match automata with
+    | Automata.Character(x) -> 
+      match state.Remaining with
+      | next :: remaining when next = x -> 
+        AutomataMatch.Success({ state with Remaining = remaining
+                                           Taken = state.Taken + 1 })
+      | _ -> AutomataMatch.Failure(EngineFailure.AutomataMismatch)
+    | _ -> AutomataMatch.Failure(EngineFailure.AutomataMismatch)
   
   let evaluateRule (rule : Rule<'m, 't>) (state : AutomataState<'m>) = 
     let automataResult = evaluateAutomata rule.Automata state
@@ -107,15 +124,20 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
       let tokenResult = 
         { Token.Offset = newState.Offset
           Token.Text = tokenText
+          Token.RuleID = rule.ID
           Token.TokenType = rule.Mapper tokenText }
       
-      let nextMode =
+      let nextMode = 
         match rule.RuleAction with
         | Some(RuleAction.PushMode(x)) -> x :: state.Mode
         | Some(RuleAction.PopMode) -> state.Mode.Tail
         | _ -> state.Mode
-
-      let newState = { newState with Offset = newState.Offset + newState.Taken; Mode = nextMode }
+      
+      let newState = 
+        { newState with Offset = newState.Offset + newState.Taken
+                        Mode = nextMode
+                        Taken = 0 }
+      
       EngineMatch.Success(tokenResult, newState)
   
   let nextToken (state : AutomataState<'m>) = 
@@ -132,7 +154,7 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
       evaluateNextRule rules
     | None -> EngineMatch.Failure EngineFailure.UnknownMode
   
-  member this.ParseString (text : string) (initialmode : 'm) = 
+  member this.ParseString (text : string) initialmode = 
     let rec readToken (state : AutomataState<'m>) (tokens : Token<'t> list) = 
       if state.Remaining.IsEmpty then EngineResult.Success(tokens |> List.rev)
       else 

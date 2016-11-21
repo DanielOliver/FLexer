@@ -4,6 +4,7 @@ type Token<'t> =
   { Text: string
     Offset: int
     TokenType: 't
+    RuleID: int
   }
 
 //type [<RequireQualifiedAccess>] Rule<'t> =
