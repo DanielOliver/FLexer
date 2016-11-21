@@ -46,17 +46,18 @@ type [<RequireQualifiedAccess>] LexerMode =
   | Arrow
   
 let rules = 
-  [| Rule.From LexerMode.Normal TokenType.Identifier None "Space Normal" (Automata.Character(' ')) 0 0
-     Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Automata.Character(' ')) 0 1
-     Rule.From LexerMode.Normal TokenType.Identifier (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Automata.Character('<')) 0 2
-     Rule.From LexerMode.Arrow TokenType.Identifier (Some(RuleAction.PopMode)) ">" (Automata.Character('>')) 0 3
+  [| Rule.From LexerMode.Normal TokenType.Identifier None "Space Normal" (Automata.Character(' ')) 1 0
+     Rule.From LexerMode.Normal (fun _ -> TokenType.Keyword Keyword.Let) None "Space Normal" (Automata.Word("Let")) 0 1
+     Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Automata.Character(' ')) 0 2
+     Rule.From LexerMode.Normal (fun _ -> TokenType.Operator Operator.GreaterThan) (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Automata.Character('<')) 1 3
+     Rule.From LexerMode.Arrow (fun _ -> TokenType.Operator Operator.LessThan) (Some(RuleAction.PopMode)) ">" (Automata.Character('>')) 0 4
   |]
 
 [<EntryPoint>]
 let main argv = 
   let engine = Engine rules
   
-  let example = "  <  > >  "
+  let example = " let <  > >  "
   let engineResult = engine.ParseString example LexerMode.Normal
 
   let tokens =

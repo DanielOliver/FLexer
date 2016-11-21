@@ -1,5 +1,7 @@
 ﻿namespace FLexer.Lexical
 
+open System
+
 [<RequireQualifiedAccess>]
 type Automata = 
   | WildcardCharacter
@@ -21,11 +23,6 @@ type private AutomataState<'m> =
     Remaining : char list
     Taken : int
     Offset : int }
-
-[<RequireQualifiedAccess>]
-type private AutomataResult<'m> = 
-  | Success of Taken : int * State : AutomataState<'m>
-  | Failure of Error : string
 
 [<RequireQualifiedAccess>]
 type RuleType = 
@@ -63,7 +60,7 @@ type EngineFailure =
 
 [<RequireQualifiedAccess>]
 type private EngineMatch<'m, 't> = 
-  | Success of Token<'m,'t> * AutomataState<'m>
+  | Success of Token<'m, 't> * AutomataState<'m>
   | Failure of EngineFailure
 
 [<RequireQualifiedAccess>]
@@ -73,8 +70,8 @@ type private AutomataMatch<'m> =
 
 [<RequireQualifiedAccess>]
 type EngineResult<'m, 't> = 
-  | Success of Token<'m,'t> list
-  | Failure of Token<'m,'t> list * EngineFailure
+  | Success of Token<'m, 't> list
+  | Failure of Token<'m, 't> list * EngineFailure
 
 type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) = 
   
@@ -98,6 +95,11 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
          |> Seq.toList)
     |> Map.ofSeq
   
+  let charListToString x = 
+    x
+    |> List.toArray
+    |> System.String
+  
   let evaluateAutomata (automata : Automata) (state : AutomataState<'m>) = 
     match automata with
     | Automata.Character(x) -> 
@@ -106,6 +108,15 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
         AutomataMatch.Success({ state with Remaining = remaining
                                            Taken = state.Taken + 1 })
       | _ -> AutomataMatch.Failure(EngineFailure.AutomataMismatch)
+    | Automata.Word(x) -> 
+      if x.Length > state.Remaining.Length then AutomataMatch.Failure(EngineFailure.AutomataMismatch)
+      else 
+        let wordMatch, remaining = state.Remaining |> List.splitAt (x.Length)
+        let matchedText = charListToString wordMatch
+        if matchedText.Equals(x, StringComparison.InvariantCultureIgnoreCase) then 
+          AutomataMatch.Success({ state with Remaining = remaining
+                                             Taken = state.Taken + matchedText.Length })
+        else AutomataMatch.Failure(EngineFailure.AutomataMismatch)
     | _ -> AutomataMatch.Failure(EngineFailure.AutomataMismatch)
   
   let evaluateRule (rule : Rule<'m, 't>) (state : AutomataState<'m>) = 
@@ -116,8 +127,7 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
       let tokenText : string = 
         state.Remaining
         |> List.take (newState.Taken)
-        |> List.toArray
-        |> System.String
+        |> charListToString
       
       let tokenResult = 
         { Token.Offset = newState.Offset
