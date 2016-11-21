@@ -43,9 +43,8 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Rule.fs" />
-    <Compile Include="Evaluator.fs" />
-    <Compile Include="Tokenizer.fs" />
+    <Compile Include="Token.fs" />
+    <Compile Include="Automata.fs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
