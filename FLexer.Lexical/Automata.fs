@@ -48,19 +48,26 @@ type Rule<'m, 't> =
     Order : int
     ID : int }
 
-
-type [<RequireQualifiedAccess>] EngineFailure =
+[<RequireQualifiedAccess>]
+type EngineFailure = 
   | EOF
   | UnknownMode
   | NoMatchingRule
 
-type [<RequireQualifiedAccess>] EngineMatch<'m,'t> =
+[<RequireQualifiedAccess>]
+type EngineMatch<'m, 't> = 
   | Success of Token<'t> * AutomataState<'m>
   | Failure of EngineFailure
 
-type [<RequireQualifiedAccess>] AutomataMatch<'m> =
+[<RequireQualifiedAccess>]
+type private AutomataMatch<'m> = 
   | Success of AutomataState<'m>
   | Failure of EngineFailure
+
+[<RequireQualifiedAccess>]
+type EngineResult<'m, 't> = 
+  | Success of Token<'t> list
+  | Failure of Token<'t> list * EngineFailure
 
 type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) = 
   
@@ -84,42 +91,53 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
          |> Seq.toList)
     |> Map.ofSeq
   
-  let evaluateAutomata (automata : Automata) (state : AutomataState<'m>) = 
-    AutomataMatch.Success state
+  let evaluateAutomata (automata : Automata) (state : AutomataState<'m>) = AutomataMatch.Success state
   
   let evaluateRule (rule : Rule<'m, 't>) (state : AutomataState<'m>) = 
     let automataResult = evaluateAutomata rule.Automata state
     match automataResult with
     | AutomataMatch.Failure(x) -> EngineMatch.Failure x
-    | AutomataMatch.Success(newState) ->
-      let tokenText: string = 
+    | AutomataMatch.Success(newState) -> 
+      let tokenText : string = 
         state.Remaining
         |> List.take (newState.Taken)
         |> List.toArray
         |> System.String
-    
+      
       let tokenResult = 
         { Token.Offset = newState.Offset
           Token.Text = tokenText
           Token.TokenType = rule.Mapper tokenText }
-    
+      
       let newState = { newState with Offset = newState.Offset + newState.Taken }
       EngineMatch.Success(tokenResult, newState)
   
   let nextToken (state : AutomataState<'m>) = 
     match orderLookup.TryFind state.Mode with
     | Some(rules) -> 
-      let rec evaluateNextRule (remainingRules: Rule<'m,'t> list) =
+      let rec evaluateNextRule (remainingRules : Rule<'m, 't> list) = 
         match remainingRules with
         | [] -> EngineMatch.Failure EngineFailure.NoMatchingRule
-        | head :: tail ->
-          let nextResult = evaluateRule head state 
+        | head :: tail -> 
+          let nextResult = evaluateRule head state
           match nextResult with
           | EngineMatch.Success(token, newState) -> nextResult
           | EngineMatch.Failure(_) -> evaluateNextRule tail
       evaluateNextRule rules
     | None -> EngineMatch.Failure EngineFailure.UnknownMode
-
+  
+  member this.ParseString (text : string) (initialmode : 'm) = 
+    let rec readToken (state : AutomataState<'m>) (tokens : Token<'t> list) = 
+      if state.Remaining.IsEmpty then EngineResult.Success(tokens |> List.rev)
+      else 
+        match nextToken (state) with
+        | EngineMatch.Success(token, newState) -> readToken newState (token :: tokens)
+        | EngineMatch.Failure(fail) -> EngineResult.Failure(tokens |> List.rev, fail)
+    readToken { Offset = 0
+                Remaining = text |> Seq.toList
+                Mode = initialmode
+                Taken = 0 } []
+  
   member this.ID0 = nameLookup
   member this.ID1 = idLookup
   member this.ID2 = orderLookup
