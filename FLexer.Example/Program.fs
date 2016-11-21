@@ -43,24 +43,21 @@ type [<RequireQualifiedAccess>] TokenType =
 
 type [<RequireQualifiedAccess>] LexerMode =
   | Normal
-  | StringLiteral
-
-let example = "
-let Four = 5.0;
-let Method(param: int): bool {
-  if (param == 0) then { true; } else { false; }
-}"
-
-
+  | Arrow
+  
 let rules = 
-  [| Rule.From LexerMode.Normal TokenType.Identifier None "Space" (Automata.Character(' ')) 0 0
-     Rule.From LexerMode.Normal TokenType.Identifier None "C" (Automata.Character('c')) 0 0
+  [| Rule.From LexerMode.Normal TokenType.Identifier None "Space Normal" (Automata.Character(' ')) 0 0
+     Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Automata.Character(' ')) 0 1
+     Rule.From LexerMode.Normal TokenType.Identifier (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Automata.Character('<')) 0 2
+     Rule.From LexerMode.Arrow TokenType.Identifier (Some(RuleAction.PopMode)) ">" (Automata.Character('>')) 0 3
   |]
 
 [<EntryPoint>]
 let main argv = 
   let engine = Engine rules
-  let engineResult = engine.ParseString " c ccc  " LexerMode.Normal
+  
+  let example = "  <  > >  "
+  let engineResult = engine.ParseString example LexerMode.Normal
 
   let tokens =
     match engineResult with
@@ -72,7 +69,7 @@ let main argv =
       tokens
 
   for i in tokens do
-    printfn "%A" i.TokenType
+    printfn "%A" i
 
   System.Console.Read() |> ignore
   0 // return an integer exit code

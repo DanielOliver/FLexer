@@ -65,7 +65,7 @@ type EngineFailure =
 
 [<RequireQualifiedAccess>]
 type EngineMatch<'m, 't> = 
-  | Success of Token<'t> * AutomataState<'m>
+  | Success of Token<'m,'t> * AutomataState<'m>
   | Failure of EngineFailure
 
 [<RequireQualifiedAccess>]
@@ -75,8 +75,8 @@ type private AutomataMatch<'m> =
 
 [<RequireQualifiedAccess>]
 type EngineResult<'m, 't> = 
-  | Success of Token<'t> list
-  | Failure of Token<'t> list * EngineFailure
+  | Success of Token<'m,'t> list
+  | Failure of Token<'m,'t> list * EngineFailure
 
 type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) = 
   
@@ -125,7 +125,8 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
         { Token.Offset = newState.Offset
           Token.Text = tokenText
           Token.RuleID = rule.ID
-          Token.TokenType = rule.Mapper tokenText }
+          Token.TokenType = rule.Mapper tokenText
+          Mode = state.Mode.Head }
       
       let nextMode = 
         match rule.RuleAction with
@@ -155,7 +156,7 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
     | None -> EngineMatch.Failure EngineFailure.UnknownMode
   
   member this.ParseString (text : string) initialmode = 
-    let rec readToken (state : AutomataState<'m>) (tokens : Token<'t> list) = 
+    let rec readToken (state : AutomataState<'m>) (tokens : Token<'m, 't> list) = 
       if state.Remaining.IsEmpty then EngineResult.Success(tokens |> List.rev)
       else 
         match nextToken (state) with
