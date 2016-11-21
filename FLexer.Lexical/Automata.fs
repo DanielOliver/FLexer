@@ -1,6 +1,7 @@
 ﻿namespace FLexer.Lexical
 
-type [<RequireQualifiedAccess>] Automata =
+[<RequireQualifiedAccess>]
+type Automata = 
   | WildcardCharacter
   | Character of char
   | CharactorEvaluation of (char -> bool)
@@ -15,64 +16,80 @@ type [<RequireQualifiedAccess>] Automata =
   | OneOrMoreGreedy of Automata
   | ZeroOrMoreGreedy of Automata
 
-type AutomataState<'m> =
-  { Mode: 'm
-    Remaining: char list
-  }
+type AutomataState<'m> = 
+  { Mode : 'm
+    Remaining : char list
+    Taken : int
+    Offset : int }
 
-type [<RequireQualifiedAccess>] AutomataResult<'m> =
-  | Success of Taken: int * State: AutomataState<'m>
-  | Failure of Error: string
+[<RequireQualifiedAccess>]
+type AutomataResult<'m> = 
+  | Success of Taken : int * State : AutomataState<'m>
+  | Failure of Error : string
 
 type Acceptor<'m> = AutomataState<'m> -> AutomataResult<'m>
 
-type  [<RequireQualifiedAccess>] RuleType =
+[<RequireQualifiedAccess>]
+type RuleType = 
   | Fragment
   | Complete
-  
-type [<RequireQualifiedAccess>] RuleAction<'m> =
+
+[<RequireQualifiedAccess>]
+type RuleAction<'m> = 
   | PushMode of 'm
   | PopMode
 
-type Rule<'m, 't> =
-  { Mode: 'm
-    Mapper: string -> 't
-    RuleAction: RuleAction<'m> option
-    Name: string
-    Automata: Automata
-    Order: int
-    ID: int
-  }
+type Rule<'m, 't> = 
+  { Mode : 'm
+    Mapper : string -> 't
+    RuleAction : RuleAction<'m> option
+    Name : string
+    Automata : Automata
+    Order : int
+    ID : int }
 
-type Engine<'m, 't  when 'm: comparison>(rules: Rule<'m, 't> array) =
+type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) = 
+  
   let nameLookup = 
     rules
-    |> Seq.map(fun rule -> (rule.Mode, rule.Name), rule)
+    |> Seq.map (fun rule -> (rule.Mode, rule.Name), rule)
     |> Map.ofSeq
-
+  
   let idLookup = 
     rules
-    |> Seq.map(fun rule -> rule.ID, rule)
+    |> Seq.map (fun rule -> rule.ID, rule)
     |> Map.ofSeq
-
+  
   let orderLookup = 
     rules
-    |> Seq.groupBy(fun rule -> rule.Mode)
-    |> Seq.map(fun (mode, r) ->
-      mode, r |> Seq.sortBy(fun t -> t.Order, t.ID) |> Seq.toArray)
+    |> Seq.groupBy (fun rule -> rule.Mode)
+    |> Seq.map (fun (mode, r) -> 
+         mode, 
+         r
+         |> Seq.sortBy (fun t -> t.Order, t.ID)
+         |> Seq.toArray)
     |> Map.ofSeq
-
-
-  let evaluateRule (rule: Rule<'m, 't>) (state: AutomataState<'m>) =
-    0
-
+  
+  let evaluateAutomata (automata : Automata) (state : AutomataState<'m>) = 
+    state
+  
+  let evaluateRule (rule : Rule<'m, 't>) (state : AutomataState<'m>) = 
+    let newState : AutomataState<'m> = evaluateAutomata rule.Automata state
+    
+    let tokenText: string = 
+      state.Remaining
+      |> List.take (newState.Taken)
+      |> List.toArray
+      |> System.String
+    
+    let tokenResult = 
+      { Token.Offset = newState.Offset
+        Token.Text = tokenText
+        Token.TokenType = rule.Mapper tokenText }
+    
+    let newState = { newState with Offset = newState.Offset + newState.Taken }
+    (tokenResult, newState)
+  
   member this.ID0 = nameLookup
   member this.ID1 = idLookup
   member this.ID2 = orderLookup
-
-
-
-
-
-
-

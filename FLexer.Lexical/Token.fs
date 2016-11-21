@@ -1,4 +1,4 @@
-﻿module FLexer.Lexical.Tokenizer
+﻿namespace FLexer.Lexical
 
 type Token<'t> =
   { Text: string
@@ -6,16 +6,16 @@ type Token<'t> =
     TokenType: 't
   }
 
-type [<RequireQualifiedAccess>] Rule<'t> =
-  | Regex of Pattern: string * Mapper: (string -> 't)
-  | Literal of Literal: string * Mapper: (string -> 't)
-
-
-type [<RequireQualifiedAccess>] EngineMatch<'t> =
-  | Success of Token<'t>
-  | Failure of string
-
-
+//type [<RequireQualifiedAccess>] Rule<'t> =
+//  | Regex of Pattern: string * Mapper: (string -> 't)
+//  | Literal of Literal: string * Mapper: (string -> 't)
+//
+//
+//type [<RequireQualifiedAccess>] EngineMatch<'t> =
+//  | Success of Token<'t>
+//  | Failure of string
+//
+//
 //type Engine<'t>(rules: Rule<'t> list ) =
 //  let _rules = 
 //    rules 
