@@ -45,7 +45,7 @@ type [<RequireQualifiedAccess>] LexerMode =
   | Normal
   | Arrow
   
-let rules = 
+let rules: Rule<LexerMode, TokenType> array = 
   [| Rule.From LexerMode.Normal TokenType.Identifier None "Space Normal" (Automata.Character(' ')) 1 0
      Rule.From LexerMode.Normal (fun _ -> TokenType.Keyword Keyword.Let) None "Space Normal" (Automata.Word("Let")) 0 1
      Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Automata.Character(' ')) 0 2
@@ -57,7 +57,7 @@ let rules =
 let main argv = 
   let engine = Engine rules
   
-  let example = " let <  > >  "
+  let example = "let < > <>  "
   let engineResult = engine.ParseString example LexerMode.Normal
 
   let tokens =

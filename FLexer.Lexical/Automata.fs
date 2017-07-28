@@ -49,7 +49,7 @@ type Rule<'m, 't> =
       Name = name
       Automata = automata
       Order = order
-      ID = id }
+      ID = id } 
 
 [<RequireQualifiedAccess>]
 type EngineFailure = 
