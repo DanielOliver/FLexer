@@ -2,25 +2,9 @@
 
 open System
 
-[<RequireQualifiedAccess>]
-type Automata = 
-  | WildcardCharacter
-  | Character of char
-  | CharactorEvaluation of (char -> bool)
-  | Word of string
-  | Fragment of string
-  | Root of Automata list
-  | Option of Automata
-  | Not of Automata
-  | Or of Automata * Automata
-  | OneOrMore of Automata
-  | ZeroOrMore of Automata
-  | OneOrMoreGreedy of Automata
-  | ZeroOrMoreGreedy of Automata
-
 type private AutomataState<'m> = 
   { Mode : 'm list
-    Remaining : char list
+    Remaining : string
     Taken : int
     Offset : int }
 
@@ -39,17 +23,31 @@ type Rule<'m, 't> =
     Mapper : string -> 't
     RuleAction : RuleAction<'m> option
     Name : string
-    Automata : Automata
+    Regex : System.Text.RegularExpressions.Regex
     Order : int
     ID : int }
-  static member From mode mapper ruleAction name automata order id = 
+  static member Create mode mapper ruleAction name regex order id = 
     { Mode = mode
       Mapper = mapper
       RuleAction = ruleAction
       Name = name
-      Automata = automata
+      Regex = regex
       Order = order
       ID = id } 
+      
+  static member From mode mapper ruleAction name regex = 
+    { Mode = mode
+      Mapper = mapper
+      RuleAction = ruleAction
+      Name = name
+      Regex = regex
+      Order = 0
+      ID = 0 } 
+
+  static member Initialize (rules: Rule<_,_> seq) =
+    rules 
+    |> Seq.mapi(fun index item -> { item with Order = index; ID = index })
+    |> Seq.toArray
 
 [<RequireQualifiedAccess>]
 type EngineFailure = 
@@ -97,37 +95,24 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
   
   let charListToString x = 
     x
-    |> List.toArray
+    |> Seq.toArray
     |> System.String
   
-  let evaluateAutomata (automata : Automata) (state : AutomataState<'m>) = 
-    match automata with
-    | Automata.Character(x) -> 
-      match state.Remaining with
-      | next :: remaining when next = x -> 
-        AutomataMatch.Success({ state with Remaining = remaining
-                                           Taken = state.Taken + 1 })
-      | _ -> AutomataMatch.Failure(EngineFailure.AutomataMismatch)
-    | Automata.Word(x) -> 
-      if x.Length > state.Remaining.Length then AutomataMatch.Failure(EngineFailure.AutomataMismatch)
-      else 
-        let wordMatch, remaining = state.Remaining |> List.splitAt (x.Length)
-        let matchedText = charListToString wordMatch
-        if matchedText.Equals(x, StringComparison.InvariantCultureIgnoreCase) then 
-          AutomataMatch.Success({ state with Remaining = remaining
-                                             Taken = state.Taken + matchedText.Length })
-        else AutomataMatch.Failure(EngineFailure.AutomataMismatch)
-    | _ -> AutomataMatch.Failure(EngineFailure.AutomataMismatch)
+  let evaluateRegex (regex : System.Text.RegularExpressions.Regex) (state : AutomataState<'m>) = 
+    match regex.Match(state.Remaining) with
+    | x when x.Success && x.Index = 0 -> 
+        AutomataMatch.Success ({ state with Remaining = state.Remaining.Substring(x.Length);
+                                            Taken = x.Length
+                               })
+    | _ -> AutomataMatch.Failure EngineFailure.EOF
+
   
   let evaluateRule (rule : Rule<'m, 't>) (state : AutomataState<'m>) = 
-    let automataResult = evaluateAutomata rule.Automata state
+    let automataResult = evaluateRegex rule.Regex state
     match automataResult with
     | AutomataMatch.Failure(x) -> EngineMatch.Failure x
     | AutomataMatch.Success(newState) -> 
-      let tokenText : string = 
-        state.Remaining
-        |> List.take (newState.Taken)
-        |> charListToString
+      let tokenText : string = state.Remaining.Substring(0, newState.Taken)
       
       let tokenResult = 
         { Token.Offset = newState.Offset
@@ -165,13 +150,13 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
   
   member this.ParseString (text : string) initialmode = 
     let rec readToken (state : AutomataState<'m>) (tokens : Token<'m, 't> list) = 
-      if state.Remaining.IsEmpty then EngineResult.Success(tokens |> List.rev)
+      if state.Remaining.Length = 0 then EngineResult.Success(tokens |> List.rev)
       else 
         match nextToken (state) with
         | EngineMatch.Success(token, newState) -> readToken newState (token :: tokens)
         | EngineMatch.Failure(fail) -> EngineResult.Failure(tokens |> List.rev, fail)
     readToken { Offset = 0
-                Remaining = text |> Seq.toList
+                Remaining = text
                 Mode = [ initialmode ]
                 Taken = 0 } []
   

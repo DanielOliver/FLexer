@@ -1,5 +1,7 @@
 ﻿open FLexer.Lexical
 
+type Regex = System.Text.RegularExpressions.Regex
+type RegOpt = System.Text.RegularExpressions.RegexOptions
 
 type [<RequireQualifiedAccess>] Keyword =
   | Let
@@ -35,6 +37,7 @@ type [<RequireQualifiedAccess>] TokenType =
   | Decimal of decimal
   | Identifier of string
   | StringLiteral of string
+  | StringDelimiter of string
   | NewLine
   | Operator of Operator
   | CustomOperator of string
@@ -44,20 +47,27 @@ type [<RequireQualifiedAccess>] TokenType =
 type [<RequireQualifiedAccess>] LexerMode =
   | Normal
   | Arrow
+  | String
   
 let rules: Rule<LexerMode, TokenType> array = 
-  [| Rule.From LexerMode.Normal TokenType.Identifier None "Space Normal" (Automata.Character(' ')) 1 0
-     Rule.From LexerMode.Normal (fun _ -> TokenType.Keyword Keyword.Let) None "Space Normal" (Automata.Word("Let")) 0 1
-     Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Automata.Character(' ')) 0 2
-     Rule.From LexerMode.Normal (fun _ -> TokenType.Operator Operator.GreaterThan) (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Automata.Character('<')) 1 3
-     Rule.From LexerMode.Arrow (fun _ -> TokenType.Operator Operator.LessThan) (Some(RuleAction.PopMode)) ">" (Automata.Character('>')) 0 4
-  |]
+  [  Rule.From LexerMode.Normal TokenType.Identifier None "Space Normal" (Regex("[ ]+"))
+     Rule.From LexerMode.Normal (fun _ -> TokenType.Keyword Keyword.Let) None "Space Normal" (Regex("(?i)Let"))
+     Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Regex("[ ]+"))
+
+     Rule.From LexerMode.Normal (fun _ -> TokenType.Operator Operator.GreaterThan) (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Regex("[<]"))
+     Rule.From LexerMode.Arrow (fun _ -> TokenType.Operator Operator.LessThan) (Some(RuleAction.PopMode)) ">" (Regex("[>]"))
+
+     
+     Rule.From LexerMode.Normal (fun delimiter -> TokenType.StringDelimiter delimiter) (Some(RuleAction.PushMode(LexerMode.String))) "StringLiteralDelimiterIn" (Regex("[\"]{3}"))
+     Rule.From LexerMode.String (fun literal -> TokenType.StringLiteral literal) None "StringLiteral" (Regex("(.|\s)+?(?=[\"]{3})"))
+     Rule.From LexerMode.String (fun delimiter -> TokenType.StringDelimiter delimiter) (Some(RuleAction.PopMode)) "StringLiteralDelimiterOut" (Regex("[\"]{3}"))
+  ] |> Rule<LexerMode, TokenType>.Initialize
 
 [<EntryPoint>]
 let main argv = 
   let engine = Engine rules
   
-  let example = "let < > <>  "
+  let example = "let < > <>  \"\"\"I could be a string\r\n \"\"\"   "
   let engineResult = engine.ParseString example LexerMode.Normal
 
   let tokens =
