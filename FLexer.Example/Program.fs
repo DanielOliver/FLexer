@@ -43,6 +43,8 @@ type [<RequireQualifiedAccess>] TokenType =
   | CustomOperator of string
   | Punctuation of Punctuation
 
+  member this.NoFun = (fun (arg: string) -> this)
+
 
 type [<RequireQualifiedAccess>] LexerMode =
   | Normal
@@ -50,12 +52,13 @@ type [<RequireQualifiedAccess>] LexerMode =
   | String
   
 let rules: Rule<LexerMode, TokenType> array = 
-  [  Rule.From LexerMode.Normal TokenType.Identifier None "Space Normal" (Regex("[ ]+"))
-     Rule.From LexerMode.Normal (fun _ -> TokenType.Keyword Keyword.Let) None "Space Normal" (Regex("(?i)Let"))
+  [  Rule.From LexerMode.Normal TokenType.Whitespace.NoFun None "Whitespace" (Regex("[^\S\r\n]+"))
+     Rule.From LexerMode.Normal TokenType.NewLine.NoFun None "Newline" (Regex("(\r|\n|\r\n)+"))
+     Rule.From LexerMode.Normal (TokenType.Keyword Keyword.Let).NoFun None "Space Normal" (Regex("(?i)Let"))
      Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Regex("[ ]+"))
 
-     Rule.From LexerMode.Normal (fun _ -> TokenType.Operator Operator.GreaterThan) (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Regex("[<]"))
-     Rule.From LexerMode.Arrow (fun _ -> TokenType.Operator Operator.LessThan) (Some(RuleAction.PopMode)) ">" (Regex("[>]"))
+     Rule.From LexerMode.Normal (TokenType.Operator Operator.GreaterThan).NoFun (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Regex("[<]"))
+     Rule.From LexerMode.Arrow (TokenType.Operator Operator.LessThan).NoFun (Some(RuleAction.PopMode)) ">" (Regex("[>]"))
 
      
      Rule.From LexerMode.Normal (fun delimiter -> TokenType.StringDelimiter delimiter) (Some(RuleAction.PushMode(LexerMode.String))) "StringLiteralDelimiterIn" (Regex("[\"]{3}"))
@@ -67,7 +70,7 @@ let rules: Rule<LexerMode, TokenType> array =
 let main argv = 
   let engine = Engine rules
   
-  let example = "let < > <>  \"\"\"I could be a string\r\n \"\"\"   "
+  let example = "let < > <>          \r\n   \"\"\"I could be a string\r\n \"\"\"   "
   let engineResult = engine.ParseString example LexerMode.Normal
 
   let tokens =
