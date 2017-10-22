@@ -52,7 +52,7 @@ type [<RequireQualifiedAccess>] LexerMode =
   | String
   | Delimiters
   
-let rules: Rule<LexerMode, TokenType> array = 
+let rules: Rule array = 
   [  Rule.From LexerMode.Normal TokenType.Whitespace.NoFun None "Whitespace" (Regex("[^\S\r\n]+"))
      Rule.From LexerMode.Normal TokenType.NewLine.NoFun None "Newline" (Regex("(\r|\n|\r\n)+"))
      Rule.From LexerMode.Normal (TokenType.Keyword Keyword.Let).NoFun None "Space Normal" (Regex("(?i)Let"))

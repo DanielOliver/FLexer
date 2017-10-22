@@ -1,9 +1,8 @@
 ﻿namespace FLexer.Lexical
 
-type Token<'m,'t> =
+type Token =
   { Text: string
     Offset: int
-    TokenType: 't
+    TokenType: string
     RuleID: int
-    Mode: 'm
   }
