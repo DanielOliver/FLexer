@@ -1,4 +1,5 @@
 ﻿open FLexer.Lexical
+open System
 
 type Regex = System.Text.RegularExpressions.Regex
 type RegOpt = System.Text.RegularExpressions.RegexOptions
@@ -52,11 +53,15 @@ type [<RequireQualifiedAccess>] LexerMode =
   | String
   | Delimiters
   
-let rules: Rule array = 
+let rules: Rule<LexerMode, TokenType> array = 
   [  Rule.From LexerMode.Normal TokenType.Whitespace.NoFun None "Whitespace" (Regex("[^\S\r\n]+"))
      Rule.From LexerMode.Normal TokenType.NewLine.NoFun None "Newline" (Regex("(\r|\n|\r\n)+"))
-     Rule.From LexerMode.Normal (TokenType.Keyword Keyword.Let).NoFun None "Space Normal" (Regex("(?i)Let"))
+     Rule.From LexerMode.Normal (TokenType.Keyword Keyword.Let).NoFun None "let assignment" (Regex("(?i)Let"))
+     Rule.From LexerMode.Normal (TokenType.Keyword Keyword.Let).NoFun None "= assignment" (Regex("="))
      Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Regex("[ ]+"))
+     Rule.From LexerMode.Normal TokenType.Identifier None "Identifier" (Regex "[A-Za-z][A-Za-z0-9]*")
+     Rule.From LexerMode.Normal (Convert.ToDecimal >> TokenType.Decimal) None "Decimal" (Regex "[0-9]+[.][0-9]+m")
+     Rule.From LexerMode.Normal (Convert.ToInt32 >> TokenType.Integer) None "Integer" (Regex "[0-9]+")
 
      Rule.From LexerMode.Normal (TokenType.Operator Operator.GreaterThan).NoFun (Some(RuleAction.PushModeBefore(LexerMode.Arrow))) "<" (Regex("[<]"))
      Rule.From LexerMode.Arrow (TokenType.Operator Operator.LessThan).NoFun (Some(RuleAction.PopMode)) ">" (Regex("[>]"))
@@ -71,7 +76,7 @@ let rules: Rule array =
 let main argv = 
   let engine = Engine rules
   
-  let example = "let < > <>          \r\n   \"\"\"I could be a string\r\n \"\"\"   "
+  let example = "let TestWord = 53245 < > <>          \r\n   \"\"\"I could be a string\r\n \"\"\"   "
   let engineResult = engine.ParseString example LexerMode.Normal
 
   let tokens =
