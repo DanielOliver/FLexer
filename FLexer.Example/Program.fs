@@ -50,6 +50,7 @@ type [<RequireQualifiedAccess>] LexerMode =
   | Normal
   | Arrow
   | String
+  | Delimiters
   
 let rules: Rule<LexerMode, TokenType> array = 
   [  Rule.From LexerMode.Normal TokenType.Whitespace.NoFun None "Whitespace" (Regex("[^\S\r\n]+"))
@@ -57,13 +58,13 @@ let rules: Rule<LexerMode, TokenType> array =
      Rule.From LexerMode.Normal (TokenType.Keyword Keyword.Let).NoFun None "Space Normal" (Regex("(?i)Let"))
      Rule.From LexerMode.Arrow TokenType.Identifier None "Space Arrow" (Regex("[ ]+"))
 
-     Rule.From LexerMode.Normal (TokenType.Operator Operator.GreaterThan).NoFun (Some(RuleAction.PushMode(LexerMode.Arrow))) "<" (Regex("[<]"))
+     Rule.From LexerMode.Normal (TokenType.Operator Operator.GreaterThan).NoFun (Some(RuleAction.PushModeBefore(LexerMode.Arrow))) "<" (Regex("[<]"))
      Rule.From LexerMode.Arrow (TokenType.Operator Operator.LessThan).NoFun (Some(RuleAction.PopMode)) ">" (Regex("[>]"))
 
      
      Rule.From LexerMode.Normal (fun delimiter -> TokenType.StringDelimiter delimiter) (Some(RuleAction.PushMode(LexerMode.String))) "StringLiteralDelimiterIn" (Regex("[\"]{3}"))
      Rule.From LexerMode.String (fun literal -> TokenType.StringLiteral literal) None "StringLiteral" (Regex("(.|\s)+?(?=[\"]{3})"))
-     Rule.From LexerMode.String (fun delimiter -> TokenType.StringDelimiter delimiter) (Some(RuleAction.PopMode)) "StringLiteralDelimiterOut" (Regex("[\"]{3}"))
+     Rule.From LexerMode.String (fun delimiter -> TokenType.StringDelimiter delimiter) (Some(RuleAction.PopModeBefore)) "StringLiteralDelimiterOut" (Regex("[\"]{3}"))
   ] |> Rule<LexerMode, TokenType>.Initialize
 
 [<EntryPoint>]

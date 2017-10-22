@@ -2,7 +2,7 @@
 
 open System
 
-type private AutomataState<'m> = 
+type AutomataState<'m> = 
   { Mode : 'm list
     Remaining : string
     Taken : int
@@ -15,8 +15,14 @@ type RuleType =
 
 [<RequireQualifiedAccess>]
 type RuleAction<'m> = 
+    ///Push the given mode after processing this match.
   | PushMode of 'm
+    ///Change this match to use the given mode.
+  | PushModeBefore of 'm
+    ///Pop the given mode after processing this match.
   | PopMode
+    ///Change this match to use the next mode.
+  | PopModeBefore
 
 type Rule<'m, 't> = 
   { Mode : 'm
@@ -62,7 +68,7 @@ type private EngineMatch<'m, 't> =
   | Failure of EngineFailure
 
 [<RequireQualifiedAccess>]
-type private AutomataMatch<'m> = 
+type AutomataMatch<'m> = 
   | Success of AutomataState<'m>
   | Failure of EngineFailure
 
@@ -114,22 +120,31 @@ type Engine<'m, 't when 'm : comparison>(rules : Rule<'m, 't> array) =
     | AutomataMatch.Success(newState) -> 
       let tokenText : string = state.Remaining.Substring(0, newState.Taken)
       
+      let nextModeStack, tokenResultMode = 
+        let currentHead = state.Mode.Head
+        match rule.RuleAction with
+        | Some(RuleAction.PushMode(x)) -> 
+            x :: state.Mode, currentHead
+        | Some(RuleAction.PushModeBefore(x)) -> 
+            x :: state.Mode, x
+        | Some(RuleAction.PopMode) -> 
+            state.Mode.Tail, currentHead
+        | Some(RuleAction.PopModeBefore) ->
+            let tail = state.Mode.Tail
+            tail, tail.Head
+        | None -> state.Mode, currentHead
+
       let tokenResult = 
         { Token.Offset = newState.Offset
           Token.Text = tokenText
           Token.RuleID = rule.ID
           Token.TokenType = rule.Mapper tokenText
-          Mode = state.Mode.Head }
+          Mode = tokenResultMode }
       
-      let nextMode = 
-        match rule.RuleAction with
-        | Some(RuleAction.PushMode(x)) -> x :: state.Mode
-        | Some(RuleAction.PopMode) -> state.Mode.Tail
-        | _ -> state.Mode
       
       let newState = 
         { newState with Offset = newState.Offset + newState.Taken
-                        Mode = nextMode
+                        Mode = nextModeStack
                         Taken = 0 }
       
       EngineMatch.Success(tokenResult, newState)
