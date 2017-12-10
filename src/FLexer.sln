@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FLexer.Core", "FLexer.Core\FLexer.Core.fsproj", "{0213B355-C8A7-48F5-BB63-6F071D8E9498}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FLexer.Tests", "FLexer.Tests\FLexer.Tests.fsproj", "{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,17 @@ Global
 		{0213B355-C8A7-48F5-BB63-6F071D8E9498}.Release|x64.Build.0 = Release|x64
 		{0213B355-C8A7-48F5-BB63-6F071D8E9498}.Release|x86.ActiveCfg = Release|x86
 		{0213B355-C8A7-48F5-BB63-6F071D8E9498}.Release|x86.Build.0 = Release|x86
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Debug|x64.ActiveCfg = Debug|x64
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Debug|x64.Build.0 = Debug|x64
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Debug|x86.ActiveCfg = Debug|x86
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Debug|x86.Build.0 = Debug|x86
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Release|x64.ActiveCfg = Release|x64
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Release|x64.Build.0 = Release|x64
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Release|x86.ActiveCfg = Release|x86
+		{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 EndGlobal
