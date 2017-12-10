@@ -13,7 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="UnitTest1.fs"/>
+    <Compile Include="SimpleTokenTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FLexer.Core\FLexer.Core.fsproj" />
   </ItemGroup>
 
 </Project>

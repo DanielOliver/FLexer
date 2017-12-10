@@ -14,7 +14,7 @@ type InclusiveRange =
     /// Combines two inclusive ranges into one. Hopefully they overlap
     static member Combine (range1: InclusiveRange) (range2: InclusiveRange) =
         {   Start = char <| System.Math.Min( int range1.Start, int range2.Start )
-            End =  char <| System.Math.Min( int range1.End, int range2.End )
+            End =  char <| System.Math.Min( int range2.End, int range2.End )
         }
 
     /// Maps any simple token into a list of Inclusive
@@ -42,3 +42,4 @@ let SimplifyTokenList (tokens: MultiSimpleToken) =
     tokens 
     |> List.collect InclusiveRange.ToInclusive 
     |> InclusiveRange.CombineMultiple
+    |> List.sortBy(fun t -> t.Start)
