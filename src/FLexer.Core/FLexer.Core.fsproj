@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="SimpleToken.fs" />
-    <Compile Include="SimpleParser.fs" />
+    <Compile Include="Expression.fs" />
+    <Compile Include="Descent.fs" />
   </ItemGroup>
 </Project>
