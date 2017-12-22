@@ -12,11 +12,11 @@ type DescentTests () =
         }
 
     [<SetUp>]
-    member this.Setup () =
+    member __.Setup () =
         ()
 
     [<Test>]
-    member this.``TakeChar - Assure that one char is consumed`` () =
+    member __.``TakeChar - Assure that one char is consumed`` () =
         match TakeChar 'S' basicStatus with 
         | Ok(text, status) ->
             Assert.AreEqual("S", text)
@@ -26,15 +26,15 @@ type DescentTests () =
             Assert.Fail("Should consume one 'S' character.")
 
     [<Test>]
-    member this.``TakeChar - Assure that one char is NOT consumed`` () =
+    member __.``TakeChar - Assure that one char is NOT consumed`` () =
         match TakeChar 'M' basicStatus with 
-        | Ok(text, status) ->
+        | Ok(_) ->
             Assert.Fail("Should NOT consume character.")
         | Error _ ->
             ()
             
     [<Test>]
-    member this.``TakeCharRange - Assure that one char is consumed`` () =
+    member __.``TakeCharRange - Assure that one char is consumed`` () =
         match TakeCharRange 'R' 'Y' basicStatus with 
         | Ok(text, status) ->
             Assert.AreEqual("S", text)
@@ -44,9 +44,9 @@ type DescentTests () =
             Assert.Fail("Should consume one 'S' character.")
 
     [<Test>]
-    member this.``TakeCharRange - Assure that one char is NOT consumed`` () =
+    member __.``TakeCharRange - Assure that one char is NOT consumed`` () =
         match TakeCharRange 'M' 'P' basicStatus with 
-        | Ok(text, status) ->
+        | Ok(_) ->
             Assert.Fail("Should NOT consume character.")
         | Error _ ->
             ()
