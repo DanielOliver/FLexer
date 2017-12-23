@@ -3,8 +3,8 @@ namespace FLexer.Tests
 open NUnit.Framework
 open FLexer.Core.Descent
 
-[<DescentTests>]
-type DescentTests () =
+[<DescentConsumerTests>]
+type DescentConsumerTests () =
 
     let basicStatus =
         {   CurrentChar = 0
@@ -17,7 +17,7 @@ type DescentTests () =
 
     [<Test>]
     member __.``TakeChar - Assure that one char is consumed`` () =
-        match TakeChar 'S' basicStatus with 
+        match Consumers.TakeChar 'S' basicStatus with 
         | Ok(text, status) ->
             Assert.AreEqual("S", text)
             Assert.AreEqual(1, status.CurrentChar)
@@ -27,7 +27,7 @@ type DescentTests () =
 
     [<Test>]
     member __.``TakeChar - Assure that one char is NOT consumed`` () =
-        match TakeChar 'M' basicStatus with 
+        match Consumers.TakeChar 'M' basicStatus with 
         | Ok(_) ->
             Assert.Fail("Should NOT consume character.")
         | Error _ ->
@@ -35,7 +35,7 @@ type DescentTests () =
             
     [<Test>]
     member __.``TakeCharRange - Assure that one char is consumed`` () =
-        match TakeCharRange 'R' 'Y' basicStatus with 
+        match Consumers.TakeCharRange 'R' 'Y' basicStatus with 
         | Ok(text, status) ->
             Assert.AreEqual("S", text)
             Assert.AreEqual(1, status.CurrentChar)
@@ -45,7 +45,7 @@ type DescentTests () =
 
     [<Test>]
     member __.``TakeCharRange - Assure that one char is NOT consumed`` () =
-        match TakeCharRange 'M' 'P' basicStatus with 
+        match Consumers.TakeCharRange 'M' 'P' basicStatus with 
         | Ok(_) ->
             Assert.Fail("Should NOT consume character.")
         | Error _ ->
