@@ -92,6 +92,18 @@ module Consumers =
     let TakeRegex (regex: string) (status: TokenizerStatus): ConsumerResult =
         TakeRawRegex (regex |> System.Text.RegularExpressions.Regex) status
 
+    /// Consumes the given word if the string is a match.
+    let TakeWord (word: string) (ignoreCase: bool) (status: TokenizerStatus): ConsumerResult =
+        if status.Remainder.Length < word.Length then
+            Error TokenizerError.EOF
+        else
+            let remainderWord = status.Remainder.Substring(0, word.Length)
+            let comparisonType = if ignoreCase then System.StringComparison.CurrentCultureIgnoreCase else System.StringComparison.CurrentCulture
+            if  remainderWord.Equals(word, comparisonType) then
+                Operators.Consumed remainderWord status
+            else
+                Error TokenizerError.MatchFailure
+
     /// Consumes one given character.
     let TakeChar character (status: TokenizerStatus): ConsumerResult =
         if status.Remainder.Length = 0 then

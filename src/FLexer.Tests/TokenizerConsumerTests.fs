@@ -47,7 +47,6 @@ type TokenizerConsumerTests () =
             Assert.Fail("Should consume 'SEL'.")
 
         Consumers.TakeRegex "E" basicStatus |> Utility.AssertIsError "E is not at index 0."
-
         
     [<Test>]
     member __.``TakeRegex - Assure that complex regex is matched`` () =
@@ -58,3 +57,19 @@ type TokenizerConsumerTests () =
             Assert.AreEqual(" * FROM TESTS;", status.Remainder)
         | Error _ ->
             Assert.Fail("Should consume 'SELECT'.")
+
+            
+    [<Test>]
+    member __.``TakeWord - Assure that word is found`` () =
+        match Consumers.TakeWord "SeLeCt" true basicStatus with 
+        | Ok(text, status) ->
+            Assert.AreEqual("SELECT", text)
+            Assert.AreEqual(6, status.CurrentChar)
+            Assert.AreEqual(" * FROM TESTS;", status.Remainder)
+        | Error _ ->
+            Assert.Fail("Should consume 'SELECT'.")
+
+    [<Test>]
+    member __.``TakeWord - Assure that word is not found`` () =
+        Consumers.TakeWord "TESTS" true basicStatus |> Utility.AssertIsError "Word doesn't begin at Index 0" 
+        
