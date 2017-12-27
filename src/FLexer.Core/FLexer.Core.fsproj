@@ -3,7 +3,6 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Expression.fs" />
     <Compile Include="Tokenizer.fs" />
   </ItemGroup>
 </Project>

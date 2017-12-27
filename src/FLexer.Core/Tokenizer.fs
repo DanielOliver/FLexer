@@ -6,6 +6,7 @@ type TokenizerError =
     | EOF    
     | MatchFailure
     | RegexMatchFailure
+    | ClassifierFailure
 
 /// Keeps track of the Tokenizer as consuming.
 type TokenizerStatus =
@@ -13,16 +14,28 @@ type TokenizerStatus =
         Remainder: string
     }
 
+    /// Converts raw string into the beginning TokenizerStatus
     static member OfString text =
         {   TokenizerStatus.CurrentChar = 0
             TokenizerStatus.Remainder = text
         }
 
+/// The raw text, position, and user-defined classification of a token.
+type Token<'t> = 
+    {   StartCharacter: int
+        EndCharacter: int
+        Text: string
+        Classification: 't
+    }
 
 /// A Result of the Tokenizer consumer.
 type ConsumerResult = Result<string * TokenizerStatus, TokenizerError>
 /// Any consumer of strings should match this signature.
 type Consumer = TokenizerStatus -> ConsumerResult
+/// A Result of the Classifier consumer.
+type ClassifierResult<'t> = Result<Token<'t>, TokenizerError>
+/// Classifies raw text as a token type.
+type Classifier<'t> = ConsumerResult -> ClassifierResult<'t>
 
 /// Defined ways to combine consumers.
 module Operators = 
