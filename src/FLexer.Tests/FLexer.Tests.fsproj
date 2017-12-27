@@ -6,7 +6,10 @@
     <ProjectReference Include="..\FLexer.Core\FLexer.Core.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DescentConsumerTests.fs" />
+    <Compile Include="Utility.fs" />
+    <Compile Include="TokenizerConsumerTests.fs" />
+    <Compile Include="TokenizerOperatorTests.fs" />
+    <Compile Include="TokenizerDefinedTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="nunit" Version="3.9.0" />

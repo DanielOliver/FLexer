@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Expression.fs" />
-    <Compile Include="Descent.fs" />
+    <Compile Include="Tokenizer.fs" />
     <Compile Include="TokenBuilder.fs" />
   </ItemGroup>
 </Project>

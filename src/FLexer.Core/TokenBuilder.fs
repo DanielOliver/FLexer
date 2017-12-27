@@ -1,4 +1,4 @@
 namespace FLexer.Core
 
 type TokenBuilder() = 
-    member this.Something = 0
+    member this.Placeholder = 0
