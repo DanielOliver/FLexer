@@ -5,4 +5,10 @@ open FLexer.Core.Tokenizer
 
 [<TokenizerOperatorTests>]
 type TokenizerOperatorTests () =
-    member this.Placeholder = 0
+    [<Test>]
+    member __.``TakeChar - Assure that ZeroOrMany consumes`` () =
+        let checkString = TokenizerStatus.OfString >> (Operators.ZeroOrMore Defined.Alpha)
+
+        "abc wasd" |> checkString |> Utility.ExpectOkText "abc"
+        "zyx wasd" |> checkString |> Utility.ExpectOkText "zyx"
+        "  zyx wasd" |> checkString |> Utility.ExpectOkText ""
