@@ -13,6 +13,10 @@ let IsError (result: Result<_,_>) =
 let AssertIsOk message result =
     Assert.IsTrue(IsOk result, message)
 
+let ExpectOk expected result =
+    match result with
+    | Ok(items) -> items |> expected
+    | Error(_) -> Assert.Fail("Expected OK")
 
 let ExpectOkText expected result =
     match result with

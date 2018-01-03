@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Tokenizer.fs" />
+    <Compile Include="Classifier.fs" />
   </ItemGroup>
 </Project>

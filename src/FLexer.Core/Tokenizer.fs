@@ -32,10 +32,6 @@ type Token<'t> =
 type ConsumerResult = Result<string * TokenizerStatus, TokenizerError>
 /// Any consumer of strings should match this signature.
 type Consumer = TokenizerStatus -> ConsumerResult
-/// A Result of the Classifier consumer.
-type ClassifierResult<'t> = Result<Token<'t>, TokenizerError>
-/// Classifies raw text as a token type.
-type Classifier<'t> = ConsumerResult -> ClassifierResult<'t>
 
 /// Defined ways to combine consumers.
 module Operators = 
