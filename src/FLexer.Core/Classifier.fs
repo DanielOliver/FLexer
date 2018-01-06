@@ -36,7 +36,6 @@ type ClassifierResult<'t> = Result<ClassifierStatus<'t>, ClassifierError<'t>>
 type Classifier<'t> = ClassifierStatus<'t> -> ClassifierResult<'t>
 
 
-
 module Classifier =
 
     let private returnClassifierResult (tokenizerStatus: Tokenizer.TokenizerStatus) newToken (oldClassifierStatus: ClassifierStatus<_>) =
@@ -108,5 +107,17 @@ module Classifier =
     /// Discard's this token and moves on. Good for whitespace and unwanted characters.
     let discard (consumerResult: Tokenizer.Consumer): Classifier<_> =
         discardClassifierStatus consumerResult
-
+    
+    let tryMultiple (classifiers: Classifier<_> list): Classifier<_> =
+        fun (classifierStatus: ClassifierStatus<_>) ->
+            let firstError = classifiers.Head classifierStatus
+            match firstError with 
+            | Ok _ -> firstError
+            | _ ->
+                classifiers 
+                |> List.tryPick(fun t ->
+                    match t classifierStatus with
+                    | Error err -> None
+                    | x -> Some x)
+                |> Option.defaultValue firstError
 
