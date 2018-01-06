@@ -3,20 +3,16 @@ namespace FLexer.Core
 /// Keeps track as Classifying tokens.
 type ClassifierStatus<'t> =
     {   Consumed: Tokenizer.Token<'t> list
+        ConsumedWords: string list
         CurrentChar: int
         Remainder: string
     }
 
     static member OfString initialValue =
         {   Consumed = List.empty<_>
+            ConsumedWords = List.empty
             CurrentChar = 0
             Remainder = initialValue
-        }
-
-    static member FromTokenizerStatus consumed (tokenizerStatus: Tokenizer.TokenizerStatus) =
-        {   Consumed = consumed
-            CurrentChar = tokenizerStatus.CurrentChar
-            Remainder = tokenizerStatus.Remainder
         }
         
     member this.TokenizerStatus =
@@ -45,13 +41,15 @@ module Classifier =
 
     let private returnClassifierResult (tokenizerStatus: Tokenizer.TokenizerStatus) newToken (oldClassifierStatus: ClassifierStatus<_>) =
         {   ClassifierStatus.Consumed = newToken :: oldClassifierStatus.Consumed
+            ClassifierStatus.ConsumedWords = newToken.Text :: oldClassifierStatus.ConsumedWords
             ClassifierStatus.CurrentChar = tokenizerStatus.CurrentChar
             ClassifierStatus.Remainder = tokenizerStatus.Remainder
         }
 
         
-    let private discardClassifierResult (tokenizerStatus: Tokenizer.TokenizerStatus) (oldClassifierStatus: ClassifierStatus<_>) =
+    let private discardClassifierResult (tokenizerStatus: Tokenizer.TokenizerStatus) text (oldClassifierStatus: ClassifierStatus<_>) =
         {   ClassifierStatus.Consumed = oldClassifierStatus.Consumed
+            ClassifierStatus.ConsumedWords = text :: oldClassifierStatus.ConsumedWords
             ClassifierStatus.CurrentChar = tokenizerStatus.CurrentChar
             ClassifierStatus.Remainder = tokenizerStatus.Remainder
         }
@@ -59,7 +57,7 @@ module Classifier =
     let private discardClassifierStatus (consumerResult: Tokenizer.Consumer) (classifierStatus: ClassifierStatus<_>): ClassifierResult<_> =
         classifierStatus.TokenizerStatus
         |> consumerResult
-        |> Result.map(fun (_, status) -> discardClassifierResult status classifierStatus
+        |> Result.map(fun (text, status) -> discardClassifierResult status text classifierStatus
         )
         |> Result.mapError (Some >> ClassifierError<_>.OfTokenizerError classifierStatus)
 

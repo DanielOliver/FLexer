@@ -8,7 +8,7 @@ open FLexer.Tests.Utility
 
 [<ClassifierTests>]
 type ClassifierTests () =
-    let givenOkStatus : ClassifierStatus<string> = { TokenizerStatus.CurrentChar = 4; Remainder = "remaining" } |> ClassifierStatus.FromTokenizerStatus List.empty
+    let givenOkStatus : ClassifierStatus<string> = { ClassifierStatus.CurrentChar = 4; Remainder = "remaining"; ConsumedWords = List.empty; Consumed = List.empty }
 
     [<Test>]
     member __.``Verify name classification`` () = 
