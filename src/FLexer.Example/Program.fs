@@ -1,8 +1,15 @@
-﻿// Learn more about F# at http://fsharp.org
+﻿open FLexer.Core
 
-open System
+let SELECT = Tokenizer.Consumers.TakeWord "SELECT" true
+
 
 [<EntryPoint>]
 let main argv =
-    printfn "Hello World from F#!"
+    let stringToAccept = ClassifierStatus<string>.OfString "SELECT"
+
+    stringToAccept
+    |> Classifier.name "SELECT" SELECT
+    |> printfn "%A"
+
+    System.Console.ReadLine() |> ignore
     0 // return an integer exit code

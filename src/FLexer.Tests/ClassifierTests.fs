@@ -8,33 +8,27 @@ open FLexer.Tests.Utility
 
 [<ClassifierTests>]
 type ClassifierTests () =
-    let givenOkStatus = Result.Ok("text", { TokenizerStatus.CurrentChar = 4; Remainder = "remaining" } )
-    let givenFailedStatus = Result.Error TokenizerError.EOF
+    let givenOkStatus : ClassifierStatus<string> = { TokenizerStatus.CurrentChar = 4; Remainder = "remaining" } |> ClassifierStatus.FromTokenizerStatus List.empty
 
     [<Test>]
     member __.``Verify name classification`` () = 
-        let classified = Classifier.name "namedToken" givenOkStatus
-        classified
-        |> ExpectOk (fun (token, status) -> Assert.AreEqual("namedToken", token.Classification))
+        givenOkStatus
+        |> (Classifier.name "namedToken" (Consumers.TakeWord "remaining" true))
+        |> ExpectOk (fun status -> Assert.AreEqual("namedToken", status.Consumed.Head.Classification))
         
     [<Test>]
     member __.``Verify name classification failure`` () = 
-        let classified = Classifier.name "namedToken" givenFailedStatus
-        classified
+        givenOkStatus
+        |> (Classifier.name "namedToken" (Consumers.TakeWord "remainingasdg" true))
         |> AssertIsError "Expected error, not named."
 
     [<Test>]
-    member __.``Verify mapper classification`` () = 
-        let classified = Classifier.map (fun t -> if t = "text" then "one" else "two") givenOkStatus
-        classified
-        |> ExpectOk (fun (token, status) -> Assert.AreEqual("one", token.Classification))
-
-        let classified2 = Classifier.map (fun t -> if t = "text234234234" then "one" else "two") givenOkStatus
-        classified2
-        |> ExpectOk (fun (token, status) -> Assert.AreEqual("two", token.Classification))
+    member __.``Verify mapper classification`` () =
+        givenOkStatus
+        |> (Classifier.map (fun t -> if t = "text" then "one" else "two") (Consumers.TakeWord "remaining" true))
+        |> ExpectOk (fun status -> Assert.AreEqual("two", status.Consumed.Head.Classification))
         
-    [<Test>]
-    member __.``Verify mapper classification failure`` () = 
-        let classified = Classifier.map (fun _ -> "text") givenFailedStatus
-        classified
-        |> AssertIsError "Expected error, not named."
+        givenOkStatus
+        |> (Classifier.map (fun t -> if t = "remaining" then "one" else "two") (Consumers.TakeWord "remaining" true))
+        |> ExpectOk (fun status -> Assert.AreEqual("one", status.Consumed.Head.Classification))
+

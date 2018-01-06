@@ -3,6 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ClassifierBuilder.fs" />
     <Compile Include="Tokenizer.fs" />
     <Compile Include="Classifier.fs" />
   </ItemGroup>
