@@ -127,35 +127,49 @@ type ClassifierBuilder<'t, 'b>(initialStatus: ClassifierStatus<'t>) =
         let acceptZero = match flag with | ZeroOrMore _ -> true | _ -> false
         let predicate = match flag with | OneOrMoreWhile(_, predicate) -> predicate | _ -> (fun _ -> true)
         let maxOne = match flag with | ZeroOrOne _ -> true | _ -> false
-
+        
         match flag with 
         | ZeroOrOne classifier
         | ZeroOrMore classifier
         | OneOrMore classifier
         | OneOrMoreWhile (classifier, _) ->
             let mutable continueLoop = true
-            let mutable status = currentStatus
             let mutable items = []
+            let mutable statusList = [ currentStatus ]
             while continueLoop do
                 if maxOne && items.Length = 1 then
                     continueLoop <- false
                 else
-                    match classifier status with
+                    match classifier statusList.Head with
                     | Ok(value, result) ->
                         if predicate result.Consumed.Head then
                             items <- value :: items
-                            status <- result
+                            statusList <- result :: statusList
                         else
                             continueLoop <- false
                     | Error(err) ->
                         continueLoop <- false
-            if acceptZero || items.Length > 0 then
-                currentStatus <- status
-                items
-                |> List.rev 
-                |> f
-            else
-                ClassifierBuilderResult.Error(ClassifierError<_>.OfTokenizerError currentStatus (Some Tokenizer.TokenizerError.ClassifierFailure))
+
+
+            let finalError = ClassifierBuilderResult.Error(ClassifierError<_>.OfTokenizerError currentStatus (Some Tokenizer.TokenizerError.ClassifierFailure))
+            if acceptZero && items.IsEmpty then
+                List.empty |> f
+            else                
+                let rec tryItems (itemList: 'c list) (statusList: ClassifierStatus<'t> list) =
+                    if itemList.IsEmpty then
+                        if acceptZero then
+                            List.Empty |> f
+                        else
+                            finalError
+                    else
+                        currentStatus <- statusList.Head
+                        items
+                        |> f
+                        |> (function
+                            | Error err ->
+                                tryItems itemList.Tail statusList.Tail
+                            | Ok _ as x -> x)
+                tryItems items statusList
             
     /// Example: return "IamString"
     member this.Return(x: 'b): ClassifierBuilderResult<'t, 'b> = 

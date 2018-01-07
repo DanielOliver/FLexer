@@ -6,6 +6,7 @@ open FLexer.Core.Tokenizer
 let SELECT = Consumers.TakeWord "SELECT" true
 let FROM = Consumers.TakeWord "FROM" true
 let WHITESPACE = Consumers.TakeRegex "\s+" 
+let COMMA = Consumers.TakeChar ','
 let OPTIONAL_WHITESPACE = Consumers.TakeRegex "\s*"
 let IDENTIFIER = Consumers.TakeRegex "[A-Za-z][A-Za-z0-9]*"
 
@@ -27,25 +28,22 @@ type SQLQuery =
 let AcceptColumnName status =
     ClassifierBuilder status {
         do! Discard OPTIONAL_WHITESPACE
-        let! tokenType = 
-            Choice [
-                Classifier.name TokenType.From FROM /// This will be taken first if available, thus stopping consumption of Identifiers.
-                Classifier.map TokenType.ColumnName IDENTIFIER
-            ]
-        match tokenType with
-        | TokenType.ColumnName columnName ->
-            return columnName
-        | _ ->
-            return Failure
+        do! Discard COMMA
+        do! Discard OPTIONAL_WHITESPACE
+        let! (TokenType.ColumnName columnName) = Classifier.map TokenType.ColumnName IDENTIFIER
+        return columnName
     }
         
 let AcceptSQLQuery status =
     ClassifierBuilder status {
         // Add to token list, but don't return TokenType
         do! Accept(Classifier.name TokenType.Select SELECT)
+        do! Discard WHITESPACE
         
         // Add to token list, and return list of TokenTypes. Uses above parsing expression
-        let! columns = OneOrMore AcceptColumnName
+        let! (TokenType.ColumnName columnName1) = Classifier.map TokenType.ColumnName IDENTIFIER
+        let! moreColumns = ZeroOrMore AcceptColumnName
+        let allColumns = columnName1 :: moreColumns
 
         // Ignore whitespace
         do! Discard WHITESPACE        
@@ -57,7 +55,7 @@ let AcceptSQLQuery status =
 
         // Return the resulting of this parsing expression.
         return {
-            SQLQuery.Columns = columns
+            SQLQuery.Columns = allColumns
             SQLQuery.Table = tableName
         }        
     }
@@ -65,7 +63,7 @@ let AcceptSQLQuery status =
 
 [<EntryPoint>]
 let main argv =
-    let stringToAccept = "SELECT  Column1 FROM Table234"
+    let stringToAccept = "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
 
     stringToAccept
     |> ClassifierStatus<string>.OfString 
@@ -76,7 +74,10 @@ let main argv =
             printfn ""
             printfn "Query - %A" value
             printfn ""
-            printfn "Status - %A" status
+            printfn "Tokens -------------"
+            printfn "%10s  |  %10s  |  %20s  |  %30s" "StartChar" "EndChar" "Text" "Classification"
+            printfn "-----------------------------------------------------------------------------"
+            status.Consumed |> List.rev |> List.iter (fun t -> printfn "%10i  |  %10i  |  %20s  |  %30A" t.StartCharacter t.EndCharacter t.Text t.Classification)
         | Error err -> printfn "%A" err)
     
     0 // return an integer exit code
