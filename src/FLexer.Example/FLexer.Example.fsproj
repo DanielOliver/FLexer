@@ -1,16 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Include="Program.fs" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\FLexer.Core\FLexer.Core.fsproj" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Compile Include="Utility.fs" />
+    <Compile Include="BasicSQL.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
 </Project>

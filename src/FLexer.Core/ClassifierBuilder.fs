@@ -129,7 +129,13 @@ type ClassifierBuilder<'t, 'b>(initialStatus: ClassifierStatus<'t>) =
         let maxOne = match flag with | ZeroOrOne _ -> true | _ -> false
         
         match flag with 
-        | ZeroOrOne classifier
+        | ZeroOrOne classifier ->
+            match classifier currentStatus with
+            | Ok(value, status) as x -> 
+                currentStatus <- status
+                value |> List.singleton |> f
+            | Error _ as x ->
+                List.empty |> f
         | ZeroOrMore classifier
         | OneOrMore classifier
         | OneOrMoreWhile (classifier, _) ->
