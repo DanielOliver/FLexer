@@ -20,6 +20,9 @@ type ClassifierStatus<'t> =
             Tokenizer.TokenizerStatus.Remainder = this.Remainder
         }
 
+    member this.Classification = this.Consumed.Head.Classification
+
+
 type ClassifierError<'t> =
     {   LastStatus: ClassifierStatus<'t>
         TokenizerError: Tokenizer.TokenizerError option

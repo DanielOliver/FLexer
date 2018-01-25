@@ -11,7 +11,7 @@ let FROM = Consumers.TakeWord "FROM" true
 let WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])+"
 let COMMA = Consumers.TakeChar ','
 let PERIOD = Consumers.TakeChar '.'
-let OPTIONAL_WHITESPACE = Consumers.TakeRegex "\s*"
+let OPTIONAL_WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])*"
 let IDENTIFIER = Consumers.TakeRegex "[A-Za-z][A-Za-z0-9]*"
 
 
@@ -36,54 +36,61 @@ type SQLQuery =
 
 
 /// ######  Parser Functions  ######
-let AcceptColumnName status =
-    ClassifierBuilder status {
-        let! (TokenType.ColumnName columnName) = Classifier.map TokenType.ColumnName IDENTIFIER
-        return SQLQueryColumn.Column columnName
+let AcceptColumnName status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
+        let (ColumnName columnName) = status.Classification
+        return SQLQueryColumn.Column(columnName), status
     }
 
-let AcceptColumnNameWithTableName status =
-    ClassifierBuilder status {
-        let! (TokenType.TableName tableName) = Classifier.map TokenType.TableName IDENTIFIER
-        do! Discard PERIOD
-        let! (TokenType.ColumnName columnName) = Classifier.map TokenType.ColumnName IDENTIFIER
-        return SQLQueryColumn.ColumnWithTableName(columnName, tableName)
+let AcceptColumnNameWithTableName status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.map TokenType.TableName IDENTIFIER status
+        let (TableName tableName) = status.Classification
+        let! status = Classifier.discard COMMA status
+        let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
+        let (TableName columnName) = status.Classification
+        return SQLQueryColumn.ColumnWithTableName(columnName, tableName), status
     }
 
-let AcceptAllColumnTypes status =
-    ClassifierBuilder status {
-        do! Discard OPTIONAL_WHITESPACE
-        do! Discard COMMA
-        do! Discard OPTIONAL_WHITESPACE
+let AcceptAllColumnTypes status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = Classifier.discard COMMA status
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
 
-        let! status = [ AcceptColumnName; AcceptColumnNameWithTableName ]
-        return status
+        let! result = ClassifierBuilder.PickOne(status, [ AcceptColumnNameWithTableName; AcceptColumnName ])
+        return result
     }
+
 
 let AcceptSQLQuery status =
-    ClassifierBuilder status {
+    RootClassifierBuilder() {
         // Add to token list, but don't return TokenType
-        do! Accept(Classifier.name TokenType.Select SELECT)
-        do! Discard WHITESPACE
+        let! status = Classifier.name TokenType.Select SELECT status
+        let! status = Classifier.discard WHITESPACE status
         
         // Add to token list, and return list of TokenTypes. Uses above parsing expression
-        let! column1 = [ AcceptColumnName; AcceptColumnNameWithTableName ]
-        let! moreColumns = ZeroOrMore AcceptAllColumnTypes
+        let! (column1, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnName; AcceptColumnNameWithTableName ])
+        let! (moreColumns, status) = ClassifierBuilder.ZeroOrOne(status, AcceptAllColumnTypes)
         let allColumns = column1 :: (List.rev moreColumns)
+        printfn "%A" allColumns
 
         // Ignore whitespace
-        do! Discard WHITESPACE        
-        do! Accept(Classifier.name TokenType.From FROM)
-        do! Discard WHITESPACE
+        let! status = Classifier.discard WHITESPACE status
+        let! status = Classifier.name TokenType.From FROM status
+        let! status = Classifier.discard WHITESPACE status
 
         // Deconstruct the returned TokenType
-        let! (TokenType.TableName tableName) = Classifier.map TokenType.TableName IDENTIFIER
+        let! status = Classifier.map TokenType.TableName IDENTIFIER status
+        let (TableName tableName) = status.Classification
+
 
         // Return the resulting of this parsing expression.
         return {
             SQLQuery.Columns = allColumns
             SQLQuery.Table = tableName
-        }        
+        }, status
     }
 
 let Example() = 
