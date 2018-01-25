@@ -1,7 +1,6 @@
 ﻿namespace FLexer.Core
 
-open Tokenizer
-
+open FLexer.Core
 
 /// The result of a ClassifierBuilder computation expression
 type ClassifierBuilderResult<'a,'b> = Result<'b * ClassifierStatus<'a>, ClassifierError<'a>>
@@ -34,7 +33,7 @@ module ClassifierBuilderResult =
 
     let continueError (error: ClassifierBuilderResult<_,_>): ClassifierBuilderResult<_,_> =
         match error with
-        | Ok _ -> failwith "Expected Error"
+        | Ok _ as x -> x
         | Error err -> Error err
 
     let bind (binder: ClassifierBuilderFunction<'a, 'b, 'c>) (result: ClassifierBuilderResult<'a,'b>): ClassifierBuilderResult<'a,'c> =
@@ -49,34 +48,6 @@ module ClassifierBuilderResult =
 
 type SubClassifierBuilder<'a,'b,'c>(continuation: ClassifierBuilderFunction<'a, 'b, 'c> ) =
 
-    member this.Bind(classifierResult: ClassifierResult<'a>, f: ClassifierStatus<'a> -> ClassifierBuilderResult<'a,'b>): ClassifierBuilderResult<'a, 'c> =
-        classifierResult
-        |> Result.bind f
-        |> ClassifierBuilderResult.bind continuation
-
-    member this.Bind<'d>(classifier: ClassifierBuilderFunction<'a, 'd, 'c> -> ClassifierBuilderResult<'a, 'b>, f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'c> =
-        f
-        |> classifier
-        |> ClassifierBuilderResult.bind continuation
-
-    member this.Bind<'d>(ClassifierBuilder.PickOne(status: ClassifierStatus<'a>, classifiers: (ClassifierStatus<'a> -> ClassifierBuilderFunction<'a, 'd, 'c> -> ClassifierBuilderResult<'a, 'b>) list), f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'c> =
-
-        let rec tryClassifier remainingClassifiers =
-            match remainingClassifiers with
-            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some TokenizerError.LookaheadFailure))
-            | classifier :: tail ->
-                match classifier status f with
-                | Ok _ as x -> x |> Result.bind continuation
-                | Error _ ->
-                    tryClassifier tail            
-        tryClassifier classifiers        
-                
-    member this.Return(value, status): ClassifierBuilderResult<'a,'c> =
-        ClassifierBuilderResult.Ok (value, status)
-        
-
-type RootClassifierBuilder<'a,'c>() =
-
     member this.Bind(classifierResult: ClassifierResult<'a>, f: ClassifierStatus<'a> -> ClassifierBuilderResult<'a,'c>): ClassifierBuilderResult<'a, 'c> =
         classifierResult
         |> Result.bind f
@@ -85,14 +56,42 @@ type RootClassifierBuilder<'a,'c>() =
         f
         |> classifier
 
-        
-    member this.Bind<'d>(ClassifierBuilder.PickOne(status: ClassifierStatus<'a>, classifiers: (ClassifierStatus<'a> -> ClassifierBuilderFunction<'a, 'd, 'c> -> ClassifierBuilderResult<'a, 'c>) list), f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'c> =
+    member this.Bind<'d>(ClassifierBuilder.PickOne(status: ClassifierStatus<'a>, classifiers: RawClassifierBuilderContinuation<'a,'c,'c,'d> list), f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'c> =
         let rec tryClassifier remainingClassifiers =
             match remainingClassifiers with
-            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some TokenizerError.LookaheadFailure))
+            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
             | classifier :: tail ->
                 match classifier status f with
                 | Ok _ as x -> x
+                | Error _ ->
+                    tryClassifier tail
+        tryClassifier classifiers
+                
+    member this.Return(value: 'b, status: ClassifierStatus<'a>): ClassifierBuilderResult<'a,'c> =
+        (value, status)
+        |> ClassifierBuilderResult.Ok
+        |> Result.bind continuation
+
+
+type RootClassifierBuilder<'a,'c>() =
+
+    member this.Bind(classifierResult: ClassifierResult<'a>, f: ClassifierStatus<'a> -> ClassifierBuilderResult<'a,'c>): ClassifierBuilderResult<'a, 'c> =
+        classifierResult
+        |> Result.bind f
+        |> ClassifierBuilderResult.continueError
+
+    member this.Bind<'d>(classifier: ClassifierBuilderFunction<'a, 'd, 'c> -> ClassifierBuilderResult<'a, 'c>, f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'c> =
+        f
+        |> classifier
+
+        
+    member this.Bind<'d, 'e>(ClassifierBuilder.PickOne(status: ClassifierStatus<'a>, classifiers: RawClassifierBuilderContinuation<'a,'c,'e,'d> list), f: ClassifierBuilderFunction<'a, 'd, 'e>): ClassifierBuilderResult<'a,'c> =
+        let rec tryClassifier remainingClassifiers =
+            match remainingClassifiers with
+            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
+            | classifier :: tail ->
+                match classifier status f with
+                | Ok  _ as x -> x
                 | Error _ ->
                     tryClassifier tail            
         tryClassifier classifiers
@@ -105,8 +104,13 @@ type RootClassifierBuilder<'a,'c>() =
             match classifier status (ClassifierBuilderResult.mapValue (List.singleton) >> f) with
             | Ok _ as x -> x
             | Error _ -> (List.empty, status) |> f
+        //| ClassifierBuilder.Multiple.ZeroOrMore (status, classifier) ->
+        //    let rec acceptColumns nextStatus statusList =
+        //        match classifier nextStatus (ClassifierBuilderResult.mapValue (List.singleton) >> f) with
+        //        | Ok _ as x -> x
+        //        | Error _ -> (List.empty, status) |> f
         | _ ->
-            failwith "what what"
+            failwith "Need to implement others"
 
         
     member this.Return(value, state): ClassifierBuilderResult<'a,'c> =

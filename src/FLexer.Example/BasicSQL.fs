@@ -2,7 +2,6 @@ module FLexer.Example.BasicSQL
 
 open FLexer.Core
 open FLexer.Core.Tokenizer
-open FLexer.Core
 
 
 /// ######  Lexer words & regex  ######
@@ -47,9 +46,9 @@ let AcceptColumnNameWithTableName status continuation =
     SubClassifierBuilder continuation {
         let! status = Classifier.map TokenType.TableName IDENTIFIER status
         let (TableName tableName) = status.Classification
-        let! status = Classifier.discard COMMA status
+        let! status = Classifier.discard PERIOD status
         let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
-        let (TableName columnName) = status.Classification
+        let (ColumnName columnName) = status.Classification
         return SQLQueryColumn.ColumnWithTableName(columnName, tableName), status
     }
 
@@ -59,8 +58,8 @@ let AcceptAllColumnTypes status continuation =
         let! status = Classifier.discard COMMA status
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
 
-        let! result = ClassifierBuilder.PickOne(status, [ AcceptColumnNameWithTableName; AcceptColumnName ])
-        return result
+        let! (value, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnNameWithTableName; AcceptColumnName ])
+        return value, status
     }
 
 
@@ -98,6 +97,9 @@ let Example() =
         [   "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
             "SELECT Column1, Column2,,,NoColumn FROM Contacts"
             "SELECT  Contacts.LastName, FirstName, Contacts.ID  , BirthDay  FROM Contacts"
+            "SELECT  LastName  FROM Contacts"
+            "SELECT  Contacts.LastName  FROM Contacts"
+            "SELECT  LastName , Contacts.FirstName FROM Contacts"
         ]
 
     stringsToAccept
