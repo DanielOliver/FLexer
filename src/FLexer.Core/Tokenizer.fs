@@ -7,6 +7,7 @@ type TokenizerError =
     | MatchFailure
     | RegexMatchFailure
     | ClassifierFailure
+    | LookaheadFailure
 
 /// Keeps track of the Tokenizer as consuming.
 type TokenizerStatus =
