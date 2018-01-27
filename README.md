@@ -24,6 +24,8 @@ dotnet test
 
 ## Example Code
 ```fsharp
+module FLexer.Example.BasicSQL
+
 open FLexer.Core
 open FLexer.Core.Tokenizer
 
@@ -31,9 +33,10 @@ open FLexer.Core.Tokenizer
 /// ######  Lexer words & regex  ######
 let SELECT = Consumers.TakeWord "SELECT" true
 let FROM = Consumers.TakeWord "FROM" true
-let WHITESPACE = Consumers.TakeRegex "\s+" 
+let WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])+"
 let COMMA = Consumers.TakeChar ','
-let OPTIONAL_WHITESPACE = Consumers.TakeRegex "\s*"
+let PERIOD = Consumers.TakeChar '.'
+let OPTIONAL_WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])*"
 let IDENTIFIER = Consumers.TakeRegex "[A-Za-z][A-Za-z0-9]*"
 
 
@@ -41,82 +44,111 @@ let IDENTIFIER = Consumers.TakeRegex "[A-Za-z][A-Za-z0-9]*"
 type TokenType = 
     | Select
     | ColumnName of string
+    | ColumnIdentifier of string
     | From
     | TableName of string
 
+type SQLQueryColumn =
+    | Column of string
+    | ColumnWithTableName of ColumnName: string * TableName: string
+
 /// ######  Output of parsing  ######
 type SQLQuery =
-    {   Columns: string list
+    {   Columns: SQLQueryColumn list
         Table: string
     }
 
+
+
 /// ######  Parser Functions  ######
-let AcceptColumnName status =
-    ClassifierBuilder status {
-        do! Discard OPTIONAL_WHITESPACE
-        do! Discard COMMA
-        do! Discard OPTIONAL_WHITESPACE
-        let! (TokenType.ColumnName columnName) = Classifier.map TokenType.ColumnName IDENTIFIER
-        return columnName
+let AcceptColumnName status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
+        let (ColumnName columnName) = status.Classification
+        return SQLQueryColumn.Column(columnName), status
     }
-        
+
+let AcceptColumnNameWithTableName status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.map TokenType.TableName IDENTIFIER status
+        let (TableName tableName) = status.Classification
+        let! status = Classifier.discard PERIOD status
+        let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
+        let (ColumnName columnName) = status.Classification
+        return SQLQueryColumn.ColumnWithTableName(columnName, tableName), status
+    }
+
+let AcceptAllColumnTypes status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = Classifier.discard COMMA status
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+
+        let! (value, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnNameWithTableName; AcceptColumnName ])
+        return value, status
+    }
+
+
 let AcceptSQLQuery status =
-    ClassifierBuilder status {
+    RootClassifierBuilder() {
         // Add to token list, but don't return TokenType
-        do! Accept(Classifier.name TokenType.Select SELECT)
-        do! Discard WHITESPACE
-        
+        let! status = Classifier.name TokenType.Select SELECT status
+        let! status = Classifier.discard WHITESPACE status
+
         // Add to token list, and return list of TokenTypes. Uses above parsing expression
-        let! (TokenType.ColumnName columnName1) = Classifier.map TokenType.ColumnName IDENTIFIER
-        let! moreColumns = ZeroOrMore AcceptColumnName
-        let allColumns = columnName1 :: moreColumns
+        let! (column1, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnName; AcceptColumnNameWithTableName ])
+        let! (moreColumns, status) = ClassifierBuilder.ZeroOrMore(status, AcceptAllColumnTypes)
+        let allColumns = column1 :: (List.rev moreColumns)
 
         // Ignore whitespace
-        do! Discard WHITESPACE        
-        do! Accept(Classifier.name TokenType.From FROM)
-        do! Discard WHITESPACE
+        let! status = Classifier.discard WHITESPACE status
+        let! status = Classifier.name TokenType.From FROM status
+        let! status = Classifier.discard WHITESPACE status
 
         // Deconstruct the returned TokenType
-        let! (TokenType.TableName tableName) = Classifier.map TokenType.TableName IDENTIFIER
+        let! status = Classifier.map TokenType.TableName IDENTIFIER status
+        let (TableName tableName) = status.Classification
+
 
         // Return the resulting of this parsing expression.
         return {
             SQLQuery.Columns = allColumns
             SQLQuery.Table = tableName
-        }        
+        }, status
     }
 
+let ExampleTester = ClassifierStatus<string>.OfString >> AcceptSQLQuery
 
-[<EntryPoint>]
-let main argv =
-    let stringToAccept = "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
+/// True if the string should be accepted, false if should be rejected.
+let ExampleStrings =
+    [   true, "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
+        false, "SELECT Column1, Column2,,,NoColumn FROM Contacts"
+        true, "SELECT  Contacts.LastName, FirstName, Contacts.ID  , BirthDay  FROM Contacts"
+        true, "SELECT  LastName  FROM Contacts"
+        true, "SELECT  Contacts.LastName  FROM Contacts"
+        true, "SELECT  LastName , Contacts.FirstName FROM Contacts"
+    ]
 
-    stringToAccept
-    |> ClassifierStatus<string>.OfString 
-    |> AcceptSQLQuery
-    |> (function
-        | Ok(value, status) -> 
-            printfn "Accepted \"%s\"" stringToAccept
-            printfn ""
-            printfn "Query - %A" value
-            printfn ""
-            printfn "Tokens -------------"
-            printfn "%10s  |  %10s  |  %20s  |  %30s" "StartChar" "EndChar" "Text" "Classification"
-            printfn "-----------------------------------------------------------------------------"
-            status.Consumed |> List.rev |> List.iter (fun t -> printfn "%10i  |  %10i  |  %20s  |  %30A" t.StartCharacter t.EndCharacter t.Text t.Classification)
-        | Error err -> printfn "%A" err)
-    
-    0 // return an integer exit code
+let Example() =
+    ExampleStrings
+    |> List.iter(fun (_, stringToTest) ->
+        stringToTest
+        |> ExampleTester
+        |> (FLexer.Example.Utility.PrintBuilderResults (printfn "%A") stringToTest)
+    )
 
 
+//   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
+// -------------------------------------------------------------------------------------
 // Accepted "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
 // 
-// Query - {Columns = ["LastName"; "BirthDay"; "ID"; "FirstName"];
+// {Columns =
+//   [Column "LastName"; Column "FirstName"; Column "ID"; Column "BirthDay"];
 //  Table = "Contacts";}
 // 
-// Tokens -------------
+// --  Consumed Tokens  ----------------------------------------------------------------
 //  StartChar  |     EndChar  |                  Text  |                  Classification
-// -----------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
 //          0  |           5  |                SELECT  |  Select
 //          8  |          15  |              LastName  |  ColumnName "LastName"
 //         18  |          26  |             FirstName  |  ColumnName "FirstName"
@@ -124,6 +156,92 @@ let main argv =
 //         35  |          42  |              BirthDay  |  ColumnName "BirthDay"
 //         45  |          48  |                  FROM  |  From
 //         50  |          57  |              Contacts  |  TableName "Contacts"
+// 
+// 
+//   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
+// -------------------------------------------------------------------------------------
+// Rejected "SELECT Column1, Column2,,,NoColumn FROM Contacts"
+// 
+// LookaheadFailure
+// 
+// --  Consumed Tokens  ----------------------------------------------------------------
+//  StartChar  |     EndChar  |                  Text  |                  Classification
+// -------------------------------------------------------------------------------------
+//          0  |           5  |                SELECT  |  Select
+// 
+// 
+//   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
+// -------------------------------------------------------------------------------------
+// Accepted "SELECT  Contacts.LastName, FirstName, Contacts.ID  , BirthDay  FROM Contacts"
+// 
+// {Columns =
+//   [ColumnWithTableName ("LastName","Contacts"); Column "FirstName";
+//    ColumnWithTableName ("ID","Contacts"); Column "BirthDay"];
+//  Table = "Contacts";}
+// 
+// --  Consumed Tokens  ----------------------------------------------------------------
+//  StartChar  |     EndChar  |                  Text  |                  Classification
+// -------------------------------------------------------------------------------------
+//          0  |           5  |                SELECT  |  Select
+//          8  |          15  |              Contacts  |  TableName "Contacts"
+//         17  |          24  |              LastName  |  ColumnName "LastName"
+//         27  |          35  |             FirstName  |  ColumnName "FirstName"
+//         38  |          45  |              Contacts  |  TableName "Contacts"
+//         47  |          48  |                    ID  |  ColumnName "ID"
+//         53  |          60  |              BirthDay  |  ColumnName "BirthDay"
+//         63  |          66  |                  FROM  |  From
+//         68  |          75  |              Contacts  |  TableName "Contacts"
+// 
+// 
+//   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
+// -------------------------------------------------------------------------------------
+// Accepted "SELECT  LastName  FROM Contacts"
+// 
+// {Columns = [Column "LastName"];
+//  Table = "Contacts";}
+// 
+// --  Consumed Tokens  ----------------------------------------------------------------
+//  StartChar  |     EndChar  |                  Text  |                  Classification
+// -------------------------------------------------------------------------------------
+//          0  |           5  |                SELECT  |  Select
+//          8  |          15  |              LastName  |  ColumnName "LastName"
+//         18  |          21  |                  FROM  |  From
+//         23  |          30  |              Contacts  |  TableName "Contacts"
+// 
+// 
+//   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
+// -------------------------------------------------------------------------------------
+// Accepted "SELECT  Contacts.LastName  FROM Contacts"
+// 
+// {Columns = [ColumnWithTableName ("LastName","Contacts")];
+//  Table = "Contacts";}
+// 
+// --  Consumed Tokens  ----------------------------------------------------------------
+//  StartChar  |     EndChar  |                  Text  |                  Classification
+// -------------------------------------------------------------------------------------
+//          0  |           5  |                SELECT  |  Select
+//          8  |          15  |              Contacts  |  TableName "Contacts"
+//         17  |          24  |              LastName  |  ColumnName "LastName"
+//         27  |          30  |                  FROM  |  From
+//         32  |          39  |              Contacts  |  TableName "Contacts"
+// 
+// 
+//   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
+// -------------------------------------------------------------------------------------
+// Accepted "SELECT  LastName , Contacts.FirstName FROM Contacts"
+// 
+// {Columns = [Column "LastName"; ColumnWithTableName ("FirstName","Contacts")];
+//  Table = "Contacts";}
+// 
+// --  Consumed Tokens  ----------------------------------------------------------------
+//  StartChar  |     EndChar  |                  Text  |                  Classification
+// -------------------------------------------------------------------------------------
+//          0  |           5  |                SELECT  |  Select
+//          8  |          15  |              LastName  |  ColumnName "LastName"
+//         19  |          26  |              Contacts  |  TableName "Contacts"
+//         28  |          36  |             FirstName  |  ColumnName "FirstName"
+//         38  |          41  |                  FROM  |  From
+//         43  |          50  |              Contacts  |  TableName "Contacts"
 ```
 
 ## Authors

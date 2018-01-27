@@ -4,9 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FLexer.Core\FLexer.Core.fsproj" />
+    <ProjectReference Include="..\FLexer.Example\FLexer.Example.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Utility.fs" />
+    <Compile Include="ExampleTests.fs" />
     <Compile Include="TokenizerConsumerTests.fs" />
     <Compile Include="TokenizerOperatorTests.fs" />
     <Compile Include="TokenizerDefinedTests.fs" />

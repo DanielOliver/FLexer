@@ -71,9 +71,8 @@ let AcceptSQLQuery status =
         
         // Add to token list, and return list of TokenTypes. Uses above parsing expression
         let! (column1, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnName; AcceptColumnNameWithTableName ])
-        let! (moreColumns, status) = ClassifierBuilder.ZeroOrOne(status, AcceptAllColumnTypes)
+        let! (moreColumns, status) = ClassifierBuilder.ZeroOrMore(status, AcceptAllColumnTypes)
         let allColumns = column1 :: (List.rev moreColumns)
-        printfn "%A" allColumns
 
         // Ignore whitespace
         let! status = Classifier.discard WHITESPACE status
@@ -92,20 +91,22 @@ let AcceptSQLQuery status =
         }, status
     }
 
-let Example() = 
-    let stringsToAccept =
-        [   "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
-            "SELECT Column1, Column2,,,NoColumn FROM Contacts"
-            "SELECT  Contacts.LastName, FirstName, Contacts.ID  , BirthDay  FROM Contacts"
-            "SELECT  LastName  FROM Contacts"
-            "SELECT  Contacts.LastName  FROM Contacts"
-            "SELECT  LastName , Contacts.FirstName FROM Contacts"
-        ]
+let ExampleTester = ClassifierStatus<string>.OfString >> AcceptSQLQuery
 
-    stringsToAccept
-    |> List.iter(fun stringToTest ->
+/// True if the string should be accepted, false if should be rejected.
+let ExampleStrings =
+    [   true, "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
+        false, "SELECT Column1, Column2,,,NoColumn FROM Contacts"
+        true, "SELECT  Contacts.LastName, FirstName, Contacts.ID  , BirthDay  FROM Contacts"
+        true, "SELECT  LastName  FROM Contacts"
+        true, "SELECT  Contacts.LastName  FROM Contacts"
+        true, "SELECT  LastName , Contacts.FirstName FROM Contacts"
+    ]
+
+let Example() =
+    ExampleStrings
+    |> List.iter(fun (_, stringToTest) ->
         stringToTest
-        |> ClassifierStatus<string>.OfString 
-        |> AcceptSQLQuery
+        |> ExampleTester
         |> (FLexer.Example.Utility.PrintBuilderResults (printfn "%A") stringToTest)
     )    
