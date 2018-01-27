@@ -244,6 +244,10 @@ let Example() =
 //         43  |          50  |              Contacts  |  TableName "Contacts"
 ```
 
+## Build
+
+[![Build status](https://ci.appveyor.com/api/projects/status/um5y5hd2a1pd6xtk/branch/master?svg=true)](https://ci.appveyor.com/project/DanielOliver/flexer/branch/master)
+
 ## Authors
 
 * **Daniel Oliver** - *Initial work* - [DanielOliver](https://github.com/DanielOliver)
