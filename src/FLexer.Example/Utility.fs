@@ -10,6 +10,8 @@ let PrintTokens (consumed: Tokenizer.Token<_> list) =
 
 let Spacer() =
     printfn ""
+    printfn ""
+    printfn "  ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***  "
     printfn "-------------------------------------------------------------------------------------"
 
 let PrintBuilderResults formatValue stringToAccept (results: ClassifierBuilderResult<_,_>) =

@@ -2,7 +2,6 @@ module FLexer.Example.BasicSQL
 
 open FLexer.Core
 open FLexer.Core.Tokenizer
-open FLexer.Core
 
 
 /// ######  Lexer words & regex  ######
@@ -11,7 +10,7 @@ let FROM = Consumers.TakeWord "FROM" true
 let WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])+"
 let COMMA = Consumers.TakeChar ','
 let PERIOD = Consumers.TakeChar '.'
-let OPTIONAL_WHITESPACE = Consumers.TakeRegex "\s*"
+let OPTIONAL_WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])*"
 let IDENTIFIER = Consumers.TakeRegex "[A-Za-z][A-Za-z0-9]*"
 
 
@@ -36,67 +35,78 @@ type SQLQuery =
 
 
 /// ######  Parser Functions  ######
-let AcceptColumnName status =
-    ClassifierBuilder status {
-        let! (TokenType.ColumnName columnName) = Classifier.map TokenType.ColumnName IDENTIFIER
-        return SQLQueryColumn.Column columnName
+let AcceptColumnName status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
+        let (ColumnName columnName) = status.Classification
+        return SQLQueryColumn.Column(columnName), status
     }
 
-let AcceptColumnNameWithTableName status =
-    ClassifierBuilder status {
-        let! (TokenType.TableName tableName) = Classifier.map TokenType.TableName IDENTIFIER
-        do! Discard PERIOD
-        let! (TokenType.ColumnName columnName) = Classifier.map TokenType.ColumnName IDENTIFIER
-        return SQLQueryColumn.ColumnWithTableName(columnName, tableName)
+let AcceptColumnNameWithTableName status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.map TokenType.TableName IDENTIFIER status
+        let (TableName tableName) = status.Classification
+        let! status = Classifier.discard PERIOD status
+        let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
+        let (ColumnName columnName) = status.Classification
+        return SQLQueryColumn.ColumnWithTableName(columnName, tableName), status
     }
 
-let AcceptAllColumnTypes status =
-    ClassifierBuilder status {
-        do! Discard OPTIONAL_WHITESPACE
-        do! Discard COMMA
-        do! Discard OPTIONAL_WHITESPACE
+let AcceptAllColumnTypes status continuation =
+    SubClassifierBuilder continuation {
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = Classifier.discard COMMA status
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
 
-        let! status = [ AcceptColumnName; AcceptColumnNameWithTableName ]
-        return status
+        let! (value, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnNameWithTableName; AcceptColumnName ])
+        return value, status
     }
+
 
 let AcceptSQLQuery status =
-    ClassifierBuilder status {
+    RootClassifierBuilder() {
         // Add to token list, but don't return TokenType
-        do! Accept(Classifier.name TokenType.Select SELECT)
-        do! Discard WHITESPACE
+        let! status = Classifier.name TokenType.Select SELECT status
+        let! status = Classifier.discard WHITESPACE status
         
         // Add to token list, and return list of TokenTypes. Uses above parsing expression
-        let! column1 = [ AcceptColumnName; AcceptColumnNameWithTableName ]
-        let! moreColumns = ZeroOrMore AcceptAllColumnTypes
+        let! (column1, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnName; AcceptColumnNameWithTableName ])
+        let! (moreColumns, status) = ClassifierBuilder.ZeroOrMore(status, AcceptAllColumnTypes)
         let allColumns = column1 :: (List.rev moreColumns)
 
         // Ignore whitespace
-        do! Discard WHITESPACE        
-        do! Accept(Classifier.name TokenType.From FROM)
-        do! Discard WHITESPACE
+        let! status = Classifier.discard WHITESPACE status
+        let! status = Classifier.name TokenType.From FROM status
+        let! status = Classifier.discard WHITESPACE status
 
         // Deconstruct the returned TokenType
-        let! (TokenType.TableName tableName) = Classifier.map TokenType.TableName IDENTIFIER
+        let! status = Classifier.map TokenType.TableName IDENTIFIER status
+        let (TableName tableName) = status.Classification
+
 
         // Return the resulting of this parsing expression.
         return {
             SQLQuery.Columns = allColumns
             SQLQuery.Table = tableName
-        }        
+        }, status
     }
 
-let Example() = 
-    let stringsToAccept =
-        [   "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
-            "SELECT Column1, Column2,,,NoColumn FROM Contacts"
-            "SELECT  Contacts.LastName, FirstName, Contacts.ID  , BirthDay  FROM Contacts"
-        ]
+let ExampleTester = ClassifierStatus<string>.OfString >> AcceptSQLQuery
 
-    stringsToAccept
-    |> List.iter(fun stringToTest ->
+/// True if the string should be accepted, false if should be rejected.
+let ExampleStrings =
+    [   true, "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
+        false, "SELECT Column1, Column2,,,NoColumn FROM Contacts"
+        true, "SELECT  Contacts.LastName, FirstName, Contacts.ID  , BirthDay  FROM Contacts"
+        true, "SELECT  LastName  FROM Contacts"
+        true, "SELECT  Contacts.LastName  FROM Contacts"
+        true, "SELECT  LastName , Contacts.FirstName FROM Contacts"
+    ]
+
+let Example() =
+    ExampleStrings
+    |> List.iter(fun (_, stringToTest) ->
         stringToTest
-        |> ClassifierStatus<string>.OfString 
-        |> AcceptSQLQuery
+        |> ExampleTester
         |> (FLexer.Example.Utility.PrintBuilderResults (printfn "%A") stringToTest)
     )    
