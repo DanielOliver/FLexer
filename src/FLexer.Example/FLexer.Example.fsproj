@@ -8,6 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Utility.fs" />
+    <Compile Include="JSON.fs" />
     <Compile Include="BasicSQL.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

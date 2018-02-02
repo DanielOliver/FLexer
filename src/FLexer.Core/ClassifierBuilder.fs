@@ -83,9 +83,9 @@ type SubClassifierBuilder<'a,'b,'c>(continuation: ClassifierBuilderFunction<'a, 
             | Error _ -> (List.empty, status) |> f
 
         | ClassifierBuilder.Multiple.ZeroOrMore (status, classifier) ->
-            let rec acceptColumns nextStatus statusList (valueList: 'd list) =
+            let rec acceptColumns nextStatus statusList (valueList: 'd list): (ClassifierStatus<'a> list * 'd list) =
                 match classifier nextStatus Ok with
-                | Ok (value, newStatus) as x -> acceptColumns newStatus (newStatus :: statusList) (value :: valueList)
+                | Ok (value, newStatus) -> acceptColumns newStatus (newStatus :: statusList) (value :: valueList)
                 | Error _ -> statusList, valueList
 
             let (statusList: ClassifierStatus<'a> list, valueList: 'd list) = acceptColumns status [] []
@@ -126,7 +126,7 @@ type SubClassifierBuilder<'a,'b,'c>(continuation: ClassifierBuilderFunction<'a, 
         (value, status)
         |> ClassifierBuilderResult.Ok
         |> Result.bind continuation
-
+        
     
 module Classifiers = 
     let root() = SubClassifierBuilder(Ok)
