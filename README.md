@@ -19,6 +19,13 @@ FLexer is NOT a parser generator. Rather, it's up the user to write the code for
 
 * Parser generators can suffice for most requirements.
 
+## Build
+
+| Appveyor | Nuget |
+|---:|:---|
+| [![Build status](https://ci.appveyor.com/api/projects/status/um5y5hd2a1pd6xtk/branch/master?svg=true)](https://ci.appveyor.com/project/DanielOliver/flexer/branch/master) | [![NuGet](https://img.shields.io/nuget/v/FLexer.svg)](https://www.nuget.org/packages/FLexer) |
+
+
 ## Getting Started
 
 ```
@@ -260,10 +267,6 @@ let Example() =
 //         38  |          41  |                  FROM  |  From
 //         43  |          50  |              Contacts  |  TableName "Contacts"
 ```
-
-## Build
-
-[![Build status](https://ci.appveyor.com/api/projects/status/um5y5hd2a1pd6xtk/branch/master?svg=true)](https://ci.appveyor.com/project/DanielOliver/flexer/branch/master)
 
 ## Authors
 
