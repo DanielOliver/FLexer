@@ -97,7 +97,6 @@ let rec AcceptArrayElement arrayType elements originalStatus continuation =
         let! status = Classifier.discard OPTIONAL_WHITESPACE originalStatus
 
         if List.isEmpty elements then
-            //let! (value, status) = AcceptJsonObject status
             let! (tryFirstValue, status) = ClassifierBuilder.ZeroOrOne(status, AcceptJsonObject)
             match tryFirstValue with
             | None -> 
@@ -144,7 +143,7 @@ and AcceptJsonKeyPair status continuation =
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
         
         let! (keyName, status) = AcceptStringLiteral status
-        let keyNameText = match keyName with | JsonValue.String str -> str | _ -> failwith "need better error"
+        let keyNameText = match keyName with | JsonValue.String str -> str | _ -> failwith "Should never reach this."
 
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
         let! status = Classifier.discard Colon status
@@ -155,17 +154,29 @@ and AcceptJsonKeyPair status continuation =
         return (keyNameText, value), status
     }
 
-and AcceptJsonKeyPairWithComma jsonKeyPairs status continuation =
+and AcceptRecordKeyPairs elements status continuation =
     Classifiers.sub continuation {
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let result = Classifier.discard Comma status
-        match result with 
-        | ClassifierResult.Ok(status) -> 
+
+        if List.isEmpty elements then
+            let! (tryFirstValue, status) = ClassifierBuilder.ZeroOrOne(status, AcceptJsonKeyPair)
+            match tryFirstValue with
+            | None -> 
+                return [], status
+            | Some firstValue ->
+                return! AcceptRecordKeyPairs [ firstValue ] status
+        else
             let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            let! (value, status) = AcceptJsonKeyPair status
-            return (value :: jsonKeyPairs), status
-        | ClassifierResult.Error _ -> 
-            return jsonKeyPairs, status
+            let result = Classifier.discard Comma status
+            match result with 
+            | ClassifierResult.Ok(status) -> 
+                let! status = Classifier.discard OPTIONAL_WHITESPACE status
+
+                let! (value, status) = AcceptJsonKeyPair status
+                return! AcceptRecordKeyPairs (value :: elements) status
+
+            | ClassifierResult.Error _ -> 
+                return elements, status
     }
 
 and AcceptJsonRecord status continuation =
@@ -174,26 +185,15 @@ and AcceptJsonRecord status continuation =
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
         let! status = Classifier.discard CurlyLeftBracket status
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-
-        let! (tryFirstItem, status) = ZeroOrOne(status, AcceptJsonKeyPair)
+                
+        let! (items, status) = AcceptRecordKeyPairs [] status
+        let finalValue = items |> List.rev |> Array.ofList
         
-
-        match tryFirstItem with
-        | None ->
-            let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            let! status = Classifier.discard CurlyRightBracket status
-            let! status = Classifier.discard OPTIONAL_WHITESPACE status
-
-            return (JsonValue.Record Array.empty), status
-
-        | Some(firstItem) ->
-            let! (allItems, status) = AcceptJsonKeyPairWithComma [ firstItem ] status
-            let finalValue = allItems |> List.rev |> Array.ofList
-
-            let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            let! status = Classifier.discard CurlyRightBracket status
-            let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            return (JsonValue.Record finalValue), status
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = Classifier.discard CurlyRightBracket status
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        
+        return (JsonValue.Record finalValue), status        
     }
 
 and AcceptJsonObject status continuation =
@@ -224,6 +224,29 @@ let ExampleStrings =
         true, " [ 23498, 09, 45, 123.0e+10, -12e-499, 9.09834E-23 ] "
         false, " [ {}, 09 ] "
         true, """ [ {}, { "key2": { "subObject": [] } }, { "items": [ 7, 8, 9 ] } ] """
+        true, """
+{
+    "glossary": {
+        "title": "example glossary",
+        "GlossDiv": {
+            "title": "S",
+            "GlossList": {
+                "GlossEntry": {
+                    "ID": "SGML",
+                    "SortAs": "SGML",
+                    "GlossTerm": "Standard Generalized Markup Language",
+                    "Acronym": "SGML",
+                    "Abbrev": "ISO 8879:1986",
+                    "GlossDef": {
+                        "para": "A meta-markup language, used to create markup languages such as DocBook.",
+                        "GlossSeeAlso": ["GML", "XML"]
+                    },
+                    "GlossSee": "markup"
+                }
+            }
+        }
+    }
+} """
     ]
 
 let Example() =
