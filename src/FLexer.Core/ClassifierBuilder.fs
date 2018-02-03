@@ -20,8 +20,10 @@ module ClassifierBuilder =
     type PickOne<'a,'b,'c,'d> =
         | PickOne of Status: ClassifierStatus<'a> * Classifiers: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d> list
 
-    type Multiple<'a,'b,'c,'d> =
+    type ZeroOrOne<'a,'b,'c,'d> =
         | ZeroOrOne of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d>
+
+    type Multiple<'a,'b,'c,'d> =
         | ZeroOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'d,'d,'d>
         | OneOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'d,'d,'d>
         
@@ -74,14 +76,13 @@ type SubClassifierBuilder<'a,'b,'c>(continuation: ClassifierBuilderFunction<'a, 
                     tryClassifier tail
         tryClassifier classifiers
 
+    member this.Bind<'d>(ClassifierBuilder.ZeroOrOne(status, classifier), f: ClassifierBuilderFunction<'a, 'd list, 'c>): ClassifierBuilderResult<'a,'c> =
+        match classifier status (ClassifierBuilderResult.mapValue (List.singleton) >> f) with
+        | Ok _ as x -> x
+        | Error _ -> (List.empty, status) |> f
         
     member this.Bind<'d>(multipleClassifier: ClassifierBuilder.Multiple<'a,'c,'c,'d>, f: ClassifierBuilderFunction<'a, 'd list, 'c>): ClassifierBuilderResult<'a,'c> =
         match multipleClassifier with
-        | ClassifierBuilder.Multiple.ZeroOrOne (status, classifier) ->
-            match classifier status (ClassifierBuilderResult.mapValue (List.singleton) >> f) with
-            | Ok _ as x -> x
-            | Error _ -> (List.empty, status) |> f
-
         | ClassifierBuilder.Multiple.ZeroOrMore (status, classifier) ->
             let rec acceptColumns nextStatus statusList (valueList: 'd list): (ClassifierStatus<'a> list * 'd list) =
                 match classifier nextStatus Ok with
