@@ -1,4 +1,4 @@
-﻿module JSON
+﻿module FLexer.Example.JSON
 
 
 open FLexer.Core
@@ -11,21 +11,26 @@ open FLexer.Core.ClassifierBuilder
 let DoubleQuote = Consumers.TakeChar '"'
 let LeftBracket = Consumers.TakeChar '['
 let RightBracket = Consumers.TakeChar ']'
+let CurlyLeftBracket = Consumers.TakeChar '{'
+let CurlyRightBracket = Consumers.TakeChar '}'
 let Colon = Consumers.TakeChar ':'
 let Comma = Consumers.TakeChar ','
 
 let NULL = Consumers.TakeWord "null" false
 let TRUE = Consumers.TakeWord "true" false
 let FALSE = Consumers.TakeWord "false" false
-let StringLiteral = Consumers.TakeRegex "([\\][\"]|.)*"
-let OPTIONAL_WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])*"
-let NumberRegex = Consumers.TakeRegex "([-]){0,1}[0-9]+([.]([0-9])+){0,1}(e(+|-){0,1}(0-9)+)"
+let StringLiteral = Consumers.TakeRegex "([\\\\][\"]|[^\"])*"
+let OPTIONAL_WHITESPACE = Consumers.TakeRegex @"(\s|[\r\n])*"
+let NumberRegex = Consumers.TakeRegex "([-]){0,1}[0-9]+([.]([0-9])+){0,1}((e|E)([+]|[-]){0,1}[0-9]+){0,1}"
+
+
 
 /// https://github.com/fsharp/FSharp.Data/blob/f000cc1a9ba19e5187b5828acbdc66a701142eb4/src/Json/JsonValue.fs#L34-L41
+/// ######  Output of parsing  ######
 [<RequireQualifiedAccessAttribute>]
 type JsonValue =
   | String of string
-  | Number of decimal
+  | Number of string
   | Record of properties:(string * JsonValue)[]
   | Array of elements:JsonValue[]
   | Boolean of bool
@@ -51,6 +56,7 @@ type JsonValueType =
 
 
   
+/// ######  Primitive Parser Functions  ######
 let rec AcceptBooleanTrue status continuation =
     Classifiers.sub continuation {
         let! status = Classifier.name (JsonValue.Boolean true) TRUE status
@@ -71,7 +77,7 @@ and AcceptNull status continuation =
     
 and AcceptNumber status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.map (System.Convert.ToDecimal >> JsonValue.Number) NumberRegex status
+        let! status = Classifier.map (JsonValue.Number) NumberRegex status
         return status.Classification, status
     }
     
@@ -83,12 +89,54 @@ and AcceptStringLiteral status continuation =
         return status.Classification, status
     }
 
+
+
+/// ######  Recursive Parser Functions  ######
+let rec AcceptArrayElement arrayType elements originalStatus continuation =
+    Classifiers.sub continuation {
+        let! status = Classifier.discard OPTIONAL_WHITESPACE originalStatus
+
+        if List.isEmpty elements then
+            //let! (value, status) = AcceptJsonObject status
+            let! (tryFirstValue, status) = ClassifierBuilder.ZeroOrOne(status, AcceptJsonObject)
+            match tryFirstValue with
+            | None -> 
+                return [], status
+            | Some firstValue ->
+                return! AcceptArrayElement (JsonValueType.Of firstValue) [ firstValue ] status
+        else
+            match Classifier.discard Comma status with 
+            | ClassifierResult.Ok(status) -> 
+                let! status = Classifier.discard OPTIONAL_WHITESPACE status
+
+                let! (value, status) = AcceptJsonObject status
+
+                if (JsonValueType.Of value) = arrayType then
+                    return! AcceptArrayElement (JsonValueType.Of value) (value :: elements) status
+                else
+                    return! status
+
+            | ClassifierResult.Error _ -> 
+                return elements, status
+    }
+
+and AcceptFirstArrayElement status continuation = 
+    AcceptArrayElement JsonValueType.Null [] status continuation
+
 and AcceptArray status continuation =
     Classifiers.sub continuation {
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! (arrayValues, status) = ClassifierBuilder.ZeroOrMore(status, AcceptJsonObject)
+        let! status = Classifier.discard LeftBracket status
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        return arrayValues, status
+
+        let! (items, status) = AcceptFirstArrayElement status
+
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = Classifier.discard RightBracket status
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+
+        let finalValues = items |> Seq.rev |> Array.ofSeq
+        return (JsonValue.Array finalValues), status
     }
 
 and AcceptJsonKeyPair status continuation =
@@ -99,62 +147,89 @@ and AcceptJsonKeyPair status continuation =
         let keyNameText = match keyName with | JsonValue.String str -> str | _ -> failwith "need better error"
 
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = Classifier.discard Colon status
+        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+
         let! (value, status) = AcceptJsonObject status
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
         return (keyNameText, value), status
     }
 
-and AcceptJsonKeyPairWithComma status (continuation: ClassifierBuilderFunction<JsonValue, string * JsonValue, JsonValue>): ClassifierBuilderResult<JsonValue, JsonValue> =
+and AcceptJsonKeyPairWithComma jsonKeyPairs status continuation =
     Classifiers.sub continuation {
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! status = Classifier.discard Comma status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! (value, status) = AcceptJsonKeyPair status
-        return value, status
+        let result = Classifier.discard Comma status
+        match result with 
+        | ClassifierResult.Ok(status) -> 
+            let! status = Classifier.discard OPTIONAL_WHITESPACE status
+            let! (value, status) = AcceptJsonKeyPair status
+            return (value :: jsonKeyPairs), status
+        | ClassifierResult.Error _ -> 
+            return jsonKeyPairs, status
     }
 
 and AcceptJsonRecord status continuation =
     Classifiers.sub continuation {
 
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! status = Classifier.discard LeftBracket status
+        let! status = Classifier.discard CurlyLeftBracket status
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
 
         let! (tryFirstItem, status) = ZeroOrOne(status, AcceptJsonKeyPair)
         
-        if tryFirstItem.IsEmpty then
+
+        match tryFirstItem with
+        | None ->
             let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            let! status = Classifier.discard RightBracket status
+            let! status = Classifier.discard CurlyRightBracket status
             let! status = Classifier.discard OPTIONAL_WHITESPACE status
 
             return (JsonValue.Record Array.empty), status
-        else
-            let firstItem = tryFirstItem.Head
-            //let! (recordList, status) = ZeroOrMore(status, AcceptJsonKeyPairWithComma)
-            //let value = (firstItem :: (List.rev recordList)) |> Array.ofList
-            let value = firstItem |> List.singleton |> Array.ofList
 
+        | Some(firstItem) ->
+            let! (allItems, status) = AcceptJsonKeyPairWithComma [ firstItem ] status
+            let finalValue = allItems |> List.rev |> Array.ofList
 
             let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            let! status = Classifier.discard RightBracket status
+            let! status = Classifier.discard CurlyRightBracket status
             let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            return (JsonValue.Record Array.empty), status
+            return (JsonValue.Record finalValue), status
     }
 
 and AcceptJsonObject status continuation =
     Classifiers.sub continuation {
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! (value, status) = PickOne(status, [ AcceptNull; AcceptNumber; AcceptStringLiteral; AcceptBooleanFalse; AcceptBooleanTrue; AcceptJsonRecord ])
+        let! (value, status) = PickOne(status, [ AcceptNull; AcceptNumber; AcceptStringLiteral; AcceptBooleanFalse; AcceptBooleanTrue; AcceptJsonRecord; AcceptArray ])
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
         return value, status
     }
-//and AcceptArray status continuation =
-//    Classifiers.sub continuation {
-//        let! status = Classifier.discard LeftBracket status
-//        let! status = Classifier.name (JsonValue.String) StringLiteral status
 
-//        let firstValue 
+let AcceptJson status: ClassifierBuilderResult<JsonValue, JsonValue> =
+    Classifiers.root() {
+        let! (jsonObject, status) = AcceptJsonObject status
+        return jsonObject, status
+    }
 
-//        let! status = Classifier.discard RightBracket status
-//        return status.Classification, status
-//    }
+
+let ExampleTester = ClassifierStatus<string>.OfString >> AcceptJson
+
+/// True if the string should be accepted, false if should be rejected.
+let ExampleStrings =
+    [   true, "{ }"
+        true, """{ "valueOne": "valueTwo" }"""
+        false, "{ -234.0: [] }"
+        true, """{ "valueOne": -123.450 }"""
+        true, """{ "valueOne": "valueTwo"  ,"value  Three "  : { "a key": 345 } }"""
+        true, " [ ] "
+        true, " [ 23498, 09, 45, 123.0e+10, -12e-499, 9.09834E-23 ] "
+        false, " [ {}, 09 ] "
+        true, """ [ {}, { "key2": { "subObject": [] } }, { "items": [ 7, 8, 9 ] } ] """
+    ]
+
+let Example() =
+    ExampleStrings
+    |> List.iter(fun (_, stringToTest) ->
+        stringToTest
+        |> ExampleTester
+        |> (FLexer.Example.Utility.PrintBuilderResults (printfn "%A") stringToTest)
+    )    

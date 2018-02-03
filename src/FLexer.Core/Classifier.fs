@@ -51,6 +51,9 @@ module Classifier =
 
         
     let private discardClassifierResult (tokenizerStatus: Tokenizer.TokenizerStatus) text (oldClassifierStatus: ClassifierStatus<_>) =
+        if System.String.IsNullOrEmpty text then
+            oldClassifierStatus
+        else
         {   ClassifierStatus.Consumed = oldClassifierStatus.Consumed
             ClassifierStatus.ConsumedWords = text :: oldClassifierStatus.ConsumedWords
             ClassifierStatus.CurrentChar = tokenizerStatus.CurrentChar

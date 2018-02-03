@@ -1,6 +1,7 @@
 ﻿namespace FLexer.Core
 
 open FLexer.Core
+open Tokenizer
 
 /// The result of a ClassifierBuilder computation expression
 type ClassifierBuilderResult<'a,'b> = Result<'b * ClassifierStatus<'a>, ClassifierError<'a>>
@@ -23,10 +24,12 @@ module ClassifierBuilder =
     type ZeroOrOne<'a,'b,'c,'d> =
         | ZeroOrOne of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d>
 
-    type Multiple<'a,'b,'c,'d> =
-        | ZeroOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'d,'d,'d>
-        | OneOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'d,'d,'d>
-        
+    type ZeroOrMore<'a,'b,'c,'d> =
+        | ZeroOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d>
+    
+    type OneOrMore<'a,'b,'c,'d> =
+        | OneOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d>
+
 
 /// Operate on Classifier Results
 module ClassifierBuilderResult =
@@ -50,6 +53,19 @@ module ClassifierBuilderResult =
         match result with
         | Ok _ -> result
         | Error _ -> defaultValue() 
+        
+
+/// An alias for continuation functions.
+module Continuation =
+    let None: ClassifierBuilderFunction<_,_,_> = ClassifierBuilderResult.Ok
+
+    let Final: ClassifierBuilderFunction<_,_,_> =
+        fun (value, status) ->
+            if status.Remainder |> System.String.IsNullOrEmpty |> not then
+                ClassifierBuilderResult.Error (ClassifierError<_>.OfTokenizerError status (Some Tokenizer.TokenizerError.UnconsumedText))
+            else
+                ClassifierBuilderResult.Ok(value, status)
+            
 
 
 /// A computation expression to compose functions with
@@ -60,7 +76,7 @@ type SubClassifierBuilder<'a,'b,'c>(continuation: ClassifierBuilderFunction<'a, 
         |> Result.bind f
 
 
-    member this.Bind<'d>(classifier: ClassifierBuilderFunction<'a, 'd, 'c> -> ClassifierBuilderResult<'a, 'c>, f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'c> =
+    member this.Bind<'d, 'e>(classifier: ClassifierBuilderFunction<'a, 'd, 'c> -> ClassifierBuilderResult<'a, 'e>, f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'e> =
         f
         |> classifier
 
@@ -76,59 +92,68 @@ type SubClassifierBuilder<'a,'b,'c>(continuation: ClassifierBuilderFunction<'a, 
                     tryClassifier tail
         tryClassifier classifiers
 
-    member this.Bind<'d>(ClassifierBuilder.ZeroOrOne(status, classifier), f: ClassifierBuilderFunction<'a, 'd list, 'c>): ClassifierBuilderResult<'a,'c> =
-        match classifier status (ClassifierBuilderResult.mapValue (List.singleton) >> f) with
+
+    member this.Bind<'d>(ClassifierBuilder.ZeroOrOne(status: ClassifierStatus<'a>, classifier: ClassifierBuilderContinuationFromStatus<'a, 'c, 'c, 'd>), f: ClassifierBuilderFunction<'a, 'd option, 'c>): ClassifierBuilderResult<'a,'c> =
+        match classifier status (ClassifierBuilderResult.mapValue (Some) >> f) with
         | Ok _ as x -> x
-        | Error _ -> (List.empty, status) |> f
+        | Error _ -> (None, status) |> f
         
-    member this.Bind<'d>(multipleClassifier: ClassifierBuilder.Multiple<'a,'c,'c,'d>, f: ClassifierBuilderFunction<'a, 'd list, 'c>): ClassifierBuilderResult<'a,'c> =
-        match multipleClassifier with
-        | ClassifierBuilder.Multiple.ZeroOrMore (status, classifier) ->
-            let rec acceptColumns nextStatus statusList (valueList: 'd list): (ClassifierStatus<'a> list * 'd list) =
-                match classifier nextStatus Ok with
-                | Ok (value, newStatus) -> acceptColumns newStatus (newStatus :: statusList) (value :: valueList)
-                | Error _ -> statusList, valueList
+    
+    member this.Bind<'d>(ClassifierBuilder.ZeroOrMore(status: ClassifierStatus<'a>, classifier: ClassifierBuilderContinuationFromStatus<'a, 'd, 'd, 'd>), f: ClassifierBuilderFunction<'a, 'd list, 'c>): ClassifierBuilderResult<'a,'c> =
+        let rec acceptColumns nextStatus statusList (valueList: 'd list): (ClassifierStatus<'a> list * 'd list) =
+            match classifier nextStatus Continuation.None with
+            | Ok (value, newStatus) -> acceptColumns newStatus (newStatus :: statusList) (value :: valueList)
+            | Error _ -> statusList, valueList
 
-            let (statusList: ClassifierStatus<'a> list, valueList: 'd list) = acceptColumns status [] []
+        let (statusList: ClassifierStatus<'a> list, valueList: 'd list) = acceptColumns status [] []
 
-            let rec testStatus statusList valueList: ClassifierBuilderResult<'a,'c> =
-                match statusList, valueList with
-                | (currentStatus :: statusTail), (_ :: valueTail) ->
-                    (valueList, currentStatus)
-                    |> f
-                    |> ClassifierBuilderResult.defaultIfError(
-                        fun () -> testStatus statusTail valueTail)
-                | _, _ -> f([], status)
+        let rec testStatus statusList valueList: ClassifierBuilderResult<'a,'c> =
+            match statusList, valueList with
+            | (currentStatus :: statusTail), (_ :: valueTail) ->
+                (valueList, currentStatus)
+                |> f
+                |> ClassifierBuilderResult.defaultIfError(
+                    fun () -> testStatus statusTail valueTail)
+            | _, _ -> f([], status)
                     
-            testStatus statusList valueList
+        testStatus statusList valueList
 
 
-        | ClassifierBuilder.Multiple.OneOrMore (status, classifier) ->
-            let rec acceptColumns nextStatus statusList (valueList: 'd list) =
-                match classifier nextStatus Ok with
-                | Ok (value, newStatus) as x -> acceptColumns newStatus (newStatus :: statusList) (value :: valueList)
-                | Error _ -> statusList, valueList
+    member this.Bind<'d>(ClassifierBuilder.OneOrMore(status: ClassifierStatus<'a>, classifier: ClassifierBuilderContinuationFromStatus<'a, 'd, 'd, 'd>), f: ClassifierBuilderFunction<'a, 'd list, 'c>): ClassifierBuilderResult<'a,'c> =
+        let rec acceptColumns nextStatus statusList (valueList: 'd list) =
+            match classifier nextStatus (ClassifierBuilderResult.Ok) with
+            | Ok (value, newStatus) -> acceptColumns newStatus (newStatus :: statusList) (value :: valueList)
+            | Error _ -> statusList, valueList
 
-            let (statusList: ClassifierStatus<'a> list, valueList: 'd list) = acceptColumns status [] []
+        let (statusList: ClassifierStatus<'a> list, valueList: 'd list) = acceptColumns status [] []
 
-            let rec testStatus statusList valueList: ClassifierBuilderResult<'a,'c> =
-                match statusList, valueList with
-                | (currentStatus :: statusTail), (_ :: valueTail) ->
-                    (valueList, currentStatus)
-                    |> f
-                    |> ClassifierBuilderResult.defaultIfError(
-                        fun () -> testStatus statusTail valueTail)
-                | _, _ -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
+        let rec testStatus statusList valueList: ClassifierBuilderResult<'a,'c> =
+            match statusList, valueList with
+            | (currentStatus :: statusTail), (_ :: valueTail) ->
+                (valueList, currentStatus)
+                |> f
+                |> ClassifierBuilderResult.defaultIfError(
+                    fun () -> testStatus statusTail valueTail)
+            | _, _ -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
                     
-            testStatus statusList valueList
+        testStatus statusList valueList
 
-                
+
     member this.Return(value: 'b, status: ClassifierStatus<'a>): ClassifierBuilderResult<'a,'c> =
         (value, status)
         |> ClassifierBuilderResult.Ok
         |> Result.bind continuation
+
         
+    member this.ReturnFrom(status: ClassifierStatus<'a>): ClassifierBuilderResult<'a,'c> =
+        ClassifierError<'a>.OfTokenizerError status (Some TokenizerError.LookaheadFailure)
+        |> ClassifierBuilderResult.Error
+
+        
+    member this.ReturnFrom(classifier: ClassifierBuilderFunction<'a, 'b, 'c> -> ClassifierBuilderResult<'a, 'c>): ClassifierBuilderResult<'a,'c> =
+        classifier continuation
+
     
 module Classifiers = 
-    let root() = SubClassifierBuilder(Ok)
+    let root() = SubClassifierBuilder(Continuation.Final)
     let sub continuation = SubClassifierBuilder(continuation)

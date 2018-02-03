@@ -8,6 +8,7 @@ type TokenizerError =
     | RegexMatchFailure
     | ClassifierFailure
     | LookaheadFailure
+    | UnconsumedText
 
 /// Keeps track of the Tokenizer as consuming.
 type TokenizerStatus =
