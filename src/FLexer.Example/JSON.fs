@@ -59,33 +59,35 @@ type JsonValueType =
 /// ######  Primitive Parser Functions  ######
 let rec AcceptBooleanTrue status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.name (JsonValue.Boolean true) TRUE status
+        let! status = name (JsonValue.Boolean true) TRUE status
         return status.Classification, status
     }
     
 and AcceptBooleanFalse status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.name (JsonValue.Boolean false) FALSE status
+        let! status = name (JsonValue.Boolean false) FALSE status
         return status.Classification, status
     }
     
 and AcceptNull status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.name (JsonValue.Null) NULL status
+        let! status = name (JsonValue.Null) NULL status
         return status.Classification, status
     }
     
 and AcceptNumber status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.map (JsonValue.Number) NumberRegex status
+        let! status = map (JsonValue.Number) NumberRegex status
         return status.Classification, status
     }
     
 and AcceptStringLiteral status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.discard DoubleQuote status
-        let! status = Classifier.map (JsonValue.String) StringLiteral status
-        let! status = Classifier.discard DoubleQuote status
+        let! status = 
+            status
+            |> discard DoubleQuote
+            |> Result.bind (map (JsonValue.String) StringLiteral)
+            |> Result.bind (discard DoubleQuote)
         return status.Classification, status
     }
 
@@ -94,19 +96,19 @@ and AcceptStringLiteral status continuation =
 /// ######  Recursive Parser Functions  ######
 let rec AcceptArrayElement arrayType elements originalStatus continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.discard OPTIONAL_WHITESPACE originalStatus
+        let! status = discard OPTIONAL_WHITESPACE originalStatus
 
         if List.isEmpty elements then
-            let! (tryFirstValue, status) = ClassifierBuilder.ZeroOrOne(status, AcceptJsonObject)
+            let! (tryFirstValue, status) = ZeroOrOne(status, AcceptJsonObject)
             match tryFirstValue with
             | None -> 
                 return [], status
             | Some firstValue ->
                 return! AcceptArrayElement (JsonValueType.Of firstValue) [ firstValue ] status
         else
-            match Classifier.discard Comma status with 
-            | ClassifierResult.Ok(status) -> 
-                let! status = Classifier.discard OPTIONAL_WHITESPACE status
+            match discard Comma status with 
+            | Ok(status) -> 
+                let! status = discard OPTIONAL_WHITESPACE status
 
                 let! (value, status) = AcceptJsonObject status
 
@@ -115,7 +117,7 @@ let rec AcceptArrayElement arrayType elements originalStatus continuation =
                 else
                     return! status
 
-            | ClassifierResult.Error _ -> 
+            | Error _ -> 
                 return elements, status
     }
 
@@ -124,15 +126,20 @@ and AcceptFirstArrayElement status continuation =
 
 and AcceptArray status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! status = Classifier.discard LeftBracket status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+
+        let! status = 
+            status
+            |> discard OPTIONAL_WHITESPACE
+            |> Result.bind (discard LeftBracket)
+            |> Result.bind (discard OPTIONAL_WHITESPACE)
 
         let! (items, status) = AcceptFirstArrayElement status
-
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! status = Classifier.discard RightBracket status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        
+        let! status = 
+            status
+            |> discard OPTIONAL_WHITESPACE
+            |> Result.bind (discard RightBracket)
+            |> Result.bind (discard OPTIONAL_WHITESPACE)
 
         let finalValues = items |> Seq.rev |> Array.ofSeq
         return (JsonValue.Array finalValues), status
@@ -140,73 +147,83 @@ and AcceptArray status continuation =
 
 and AcceptJsonKeyPair status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = discard OPTIONAL_WHITESPACE status
         
         let! (keyName, status) = AcceptStringLiteral status
         let keyNameText = match keyName with | JsonValue.String str -> str | _ -> failwith "Should never reach this."
 
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! status = Classifier.discard Colon status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = 
+            status
+            |> discard OPTIONAL_WHITESPACE
+            |> Result.bind (discard Colon)
+            |> Result.bind (discard OPTIONAL_WHITESPACE)
 
         let! (value, status) = AcceptJsonObject status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = discard OPTIONAL_WHITESPACE status
         return (keyNameText, value), status
     }
 
 and AcceptRecordKeyPairs elements status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = discard OPTIONAL_WHITESPACE status
 
         if List.isEmpty elements then
-            let! (tryFirstValue, status) = ClassifierBuilder.ZeroOrOne(status, AcceptJsonKeyPair)
+            let! (tryFirstValue, status) = ZeroOrOne(status, AcceptJsonKeyPair)
             match tryFirstValue with
             | None -> 
                 return [], status
             | Some firstValue ->
                 return! AcceptRecordKeyPairs [ firstValue ] status
         else
-            let! status = Classifier.discard OPTIONAL_WHITESPACE status
-            let result = Classifier.discard Comma status
+            let! status = discard OPTIONAL_WHITESPACE status
+            let result = discard Comma status
             match result with 
-            | ClassifierResult.Ok(status) -> 
-                let! status = Classifier.discard OPTIONAL_WHITESPACE status
+            | Ok(status) -> 
+                let! status = discard OPTIONAL_WHITESPACE status
 
                 let! (value, status) = AcceptJsonKeyPair status
                 return! AcceptRecordKeyPairs (value :: elements) status
 
-            | ClassifierResult.Error _ -> 
+            | Error _ -> 
                 return elements, status
     }
 
 and AcceptJsonRecord status continuation =
     Classifiers.sub continuation {
 
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! status = Classifier.discard CurlyLeftBracket status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = 
+            status
+            |> discard OPTIONAL_WHITESPACE
+            |> Result.bind (discard CurlyLeftBracket)
+            |> Result.bind (discard OPTIONAL_WHITESPACE)
                 
         let! (items, status) = AcceptRecordKeyPairs [] status
         let finalValue = items |> List.rev |> Array.ofList
         
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
-        let! status = Classifier.discard CurlyRightBracket status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = 
+            status
+            |> discard OPTIONAL_WHITESPACE
+            |> Result.bind (discard CurlyRightBracket)
+            |> Result.bind (discard OPTIONAL_WHITESPACE)
         
         return (JsonValue.Record finalValue), status        
     }
 
 and AcceptJsonObject status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+
+        let! status = discard OPTIONAL_WHITESPACE status
         let! (value, status) = PickOne(status, [ AcceptNull; AcceptNumber; AcceptStringLiteral; AcceptBooleanFalse; AcceptBooleanTrue; AcceptJsonRecord; AcceptArray ])
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! status = discard OPTIONAL_WHITESPACE status
+
         return value, status
     }
 
 let AcceptJson status: ClassifierBuilderResult<JsonValue, JsonValue> =
     Classifiers.root() {
+
         let! (jsonObject, status) = AcceptJsonObject status
+
         return jsonObject, status
     }
 

@@ -1,6 +1,23 @@
 # FLexer
 
-FLexer is a F# Lexer and Parser dedicated to ease of use and expressiveness. Creating Domain Specific Languages within F# and .NET is an excellent use-case.
+### FLexer is a F# Lexer and Parser dedicated to ease of use and expressiveness in creating custom recursive-descent parsers.
+
+## Description
+
+FLexer is a library combining together a Lexer and Parser, to allow ease of construction in custom recursive-descent parsers with infinite backtrack. When searching for a result to "_accept_", FLexer functions as a depth first search in completely traversing any path, before backtracking and trying a different route.
+
+FLexer is NOT a parser generator. Rather, it's up the user to write the code for the parser. This puts the responsibility of writing a performance optimal parser on the developer. The happy path of parsing will be "right first try" and very fast; however, the potential to backtrack to the worst case still exists.
+
+**Reasons to use FLexer**
+
+* Each component of the recursive descent parser may be tested in isolation, after all, it's just functions.
+* It's simple to get started. There's no parser generator or external tools to integrate into the build pipeline, it's just F#.
+* Cross-platform with the core written in .NET Standard 2.0 and no dependencies.
+* Complete customization of the parser is available at any step, such as inserting validation code inline with the parser or even using parsed data to change the parser's functionality.
+
+**Reasons to NOT use FLexer**
+
+* Parser generators can suffice for most requirements.
 
 ## Getting Started
 
