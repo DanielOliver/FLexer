@@ -116,6 +116,7 @@ Task("pack")
 {
     var msBuildSettings = new DotNetCoreMSBuildSettings();
     msBuildSettings.Properties["PackageVersion"] = new[] { semVer };
+    msBuildSettings.Properties["TargetFrameworks"] = new[] { "netstandard2.0" };
 
     var settings = new DotNetCorePackSettings
     {
