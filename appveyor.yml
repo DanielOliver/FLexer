@@ -1,7 +1,11 @@
-version: 1.0.{build}
-skip_branch_with_pr: true
 image: Visual Studio 2017
 build_script:
-- pwsh: dotnet build ./src/FLexer.sln
-test_script:
-- pwsh: dotnet test ./src/FLexer.Tests/FLexer.Tests.fsproj
+  - ps: .\build.ps1 -Target AppVeyor
+test: off
+branches:
+  # Whitelist
+  only:
+    - develop
+    - master
+    - /release/.*/
+    - /hotfix/.*/
