@@ -19,12 +19,11 @@ FLexer is NOT a parser generator. Rather, it's up the user to write the code for
 
 * Parser generators can suffice for most requirements.
 
-## Build
+## Build & Release
 
-| Appveyor | Nuget |
-|---:|:---|
-| [![Build status](https://ci.appveyor.com/api/projects/status/um5y5hd2a1pd6xtk/branch/master?svg=true)](https://ci.appveyor.com/project/DanielOliver/flexer/branch/master) | [![NuGet](https://img.shields.io/nuget/v/FLexer.svg)](https://www.nuget.org/packages/FLexer) |
-
+| Appveyor | Nuget | GitHub |
+|---:|:---:|:---|
+| [![Build status](https://ci.appveyor.com/api/projects/status/um5y5hd2a1pd6xtk/branch/master?svg=true)](https://ci.appveyor.com/project/DanielOliver/flexer/branch/master) | [![NuGet](https://img.shields.io/nuget/v/FLexer.svg)](https://www.nuget.org/packages/FLexer) | [![GitHub release](https://img.shields.io/github/release/DanielOliver/flexer.svg)](https://github.com/DanielOliver/flexer/releases/latest) |
 
 ## Getting Started
 

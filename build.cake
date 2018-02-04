@@ -26,6 +26,8 @@ var nugetApiKey = Argument("NUGET_API_KEY", EnvironmentVariable("NUGET_API_KEY")
 
 var branch = EnvironmentVariable("APPVEYOR_REPO_BRANCH") ?? "";
 var isMasterBranch = branch.ToUpper().Contains("MASTER");
+var isTagged = (EnvironmentVariable("APPVEYOR_REPO_TAG") ?? "").Contains("true");
+var tagName = EnvironmentVariable("APPVEYOR_REPO_TAG_NAME") ?? "";
 
 var local = BuildSystem.IsLocalBuild;
 var isRunningOnAppVeyor = AppVeyor.IsRunningOnAppVeyor;
@@ -41,6 +43,9 @@ Setup(ctx =>
     Information(Figlet("FLexer"));
     Information("");
     Information("Branch: " + (branch ?? ""));
+    Information("tagName: " + tagName);
+    Information("IsTagged: " + (isTagged ? "true": "false"));
+    Information("IsPullRequest: " + (isPullRequest ? "true": "false"));
 });
 
 Teardown(ctx =>
@@ -130,7 +135,7 @@ Task("pack")
 
 Task("push")
     .IsDependentOn("pack")
-    .WithCriteria(() => isRunningOnAppVeyor && isMasterBranch && !isPullRequest)
+    .WithCriteria(() => isRunningOnAppVeyor && isMasterBranch && !isPullRequest && isTagged)
 .Does(() =>
 {
     var files = GetFiles("./build/*.nupkg");
