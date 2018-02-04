@@ -139,7 +139,8 @@ Task("push")
         Information("File: {0}", nupkgFile);
         var settings = new DotNetCoreNuGetPushSettings
         {
-            ApiKey = nugetApiKey
+            ApiKey = nugetApiKey,
+            Source = "https://api.nuget.org/v3/index.json"
         };
 
         DotNetCoreNuGetPush(nupkgFile.ToString(), settings);
