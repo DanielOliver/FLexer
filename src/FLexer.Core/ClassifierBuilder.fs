@@ -70,7 +70,7 @@ module ClassifierFunction =
         tryClassifier classifiers
         
     /// Replacement for single case discriminated union.
-    let PickOneConsumer<'a,'c,'d> (classifiers: (ClassifierStatus<'a> -> ClassifierResult<'a>) list) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string, 'c>) =
+    let PickOneConsumer<'a,'c,'d> (classifiers: (ClassifierStatus<'a> -> ClassifierResult<'a>) list) =
         PickOne (classifiers |> List.map classifierToBuilderFunction)
         
     /// Replacement for single case discriminated union.
@@ -94,7 +94,7 @@ module ClassifierFunction =
         testStatus statusList valueList
             
     /// Replacement for single case discriminated union.
-    let ZeroOrMoreConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string list, 'c>) =
+    let ZeroOrMoreConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) =
         ZeroOrMore (classifierToBuilderFunction classifier)
         
     /// Replacement for single case discriminated union.
@@ -118,7 +118,7 @@ module ClassifierFunction =
         testStatus statusList valueList
         
     /// Replacement for single case discriminated union.
-    let OneOrMoreConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string list, 'c>) =
+    let OneOrMoreConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) =
         OneOrMore (classifierToBuilderFunction classifier)
 
     /// Replacement for single case discriminated union.
@@ -128,7 +128,7 @@ module ClassifierFunction =
         | Error _ -> (None, status) |> continuation
     
     /// Replacement for single case discriminated union.
-    let ZeroOrOneConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string list, 'c>) =
+    let ZeroOrOneConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) =
         ZeroOrOne (classifierToBuilderFunction classifier)
 
 
