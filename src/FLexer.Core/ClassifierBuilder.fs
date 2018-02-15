@@ -30,6 +30,32 @@ module ClassifierBuilder =
     type OneOrMore<'a,'b,'c,'d> =
         | OneOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d>
 
+module ClassifierBuilderFunction =
+
+    let PickOne<'a,'b,'c,'d> (classifiers: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d> list) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, 'd, 'c>) =
+        let rec tryClassifier remainingClassifiers =
+            match remainingClassifiers with
+            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
+            | classifier :: tail ->
+                match classifier status continuation with
+                | Ok _ as x -> x
+                | Error _ ->
+                    tryClassifier tail
+        tryClassifier classifiers
+
+
+    let PickOneConsumer<'a,'c,'d> (classifiers: (ClassifierStatus<'a> -> ClassifierResult<'a>) list) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string, 'c>) =
+        let rec tryClassifier remainingClassifiers =
+            match remainingClassifiers with
+            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
+            | classifier :: tail ->
+                match classifier status |> Result.bind (fun (t: ClassifierStatus<'a>) -> continuation (t.ConsumedText, t)) with
+                | Ok _ as x -> x
+                | Error _ ->
+                    tryClassifier tail
+        tryClassifier classifiers
+
+
 
 /// Operate on Classifier Results
 module ClassifierBuilderResult =

@@ -21,7 +21,7 @@ type ClassifierStatus<'t> =
         }
 
     member this.Classification = this.Consumed.Head.Classification
-    member this.ConsumedText = this.Consumed.Head.Text
+    member this.ConsumedText = this.ConsumedWords.Head
 
 
 type ClassifierError<'t> =

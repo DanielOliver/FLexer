@@ -57,8 +57,8 @@ let AcceptAllColumnTypes status continuation =
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
         let! status = Classifier.discard COMMA status
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
-
-        let! (value, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnNameWithTableName; AcceptColumnName ])
+        
+        let! (value, status) = ClassifierBuilderFunction.PickOne [ AcceptColumnNameWithTableName; AcceptColumnName ] status
         return value, status
     }
 
