@@ -213,7 +213,7 @@ and AcceptJsonObject status continuation =
     Classifiers.sub continuation {
 
         let! status = discard OPTIONAL_WHITESPACE status
-        let! (value, status) = PickOne(status, [ AcceptNull; AcceptNumber; AcceptStringLiteral; AcceptBooleanFalse; AcceptBooleanTrue; AcceptJsonRecord; AcceptArray ])
+        let! (value, status) = ClassifierFunction.PickOne [ AcceptNull; AcceptNumber; AcceptStringLiteral; AcceptBooleanFalse; AcceptBooleanTrue; AcceptJsonRecord; AcceptArray ] status
         let! status = discard OPTIONAL_WHITESPACE status
 
         return value, status

@@ -17,10 +17,7 @@ type ClassifierBuilderContinuation<'a,'b,'c,'d> = ClassifierBuilderFunction<'a, 
         
 /// Keywords used in ClassifierBuilder expressions
 module ClassifierBuilder =
-
-    type PickOne<'a,'b,'c,'d> =
-        | PickOne of Status: ClassifierStatus<'a> * Classifiers: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d> list
-
+    
     type ZeroOrOne<'a,'b,'c,'d> =
         | ZeroOrOne of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d>
 
@@ -30,8 +27,12 @@ module ClassifierBuilder =
     type OneOrMore<'a,'b,'c,'d> =
         | OneOrMore of Status: ClassifierStatus<'a> * Classifier: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d>
 
-module ClassifierBuilderFunction =
+module ClassifierFunction =
+    /// Impromptu conversion
+    let private classifierToBuilderFunction (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string, 'c>) =
+        classifier status |> Result.bind (fun (t: ClassifierStatus<'a>) -> continuation (t.ConsumedText, t))
 
+    /// Replacement for single case discriminated union.
     let PickOne<'a,'b,'c,'d> (classifiers: ClassifierBuilderContinuationFromStatus<'a,'b,'c,'d> list) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, 'd, 'c>) =
         let rec tryClassifier remainingClassifiers =
             match remainingClassifiers with
@@ -42,18 +43,10 @@ module ClassifierBuilderFunction =
                 | Error _ ->
                     tryClassifier tail
         tryClassifier classifiers
-
-
+        
+    /// Replacement for single case discriminated union.
     let PickOneConsumer<'a,'c,'d> (classifiers: (ClassifierStatus<'a> -> ClassifierResult<'a>) list) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string, 'c>) =
-        let rec tryClassifier remainingClassifiers =
-            match remainingClassifiers with
-            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
-            | classifier :: tail ->
-                match classifier status |> Result.bind (fun (t: ClassifierStatus<'a>) -> continuation (t.ConsumedText, t)) with
-                | Ok _ as x -> x
-                | Error _ ->
-                    tryClassifier tail
-        tryClassifier classifiers
+        PickOne (classifiers |> List.map classifierToBuilderFunction)
 
 
 
@@ -105,18 +98,6 @@ type SubClassifierBuilder<'a,'b,'c>(continuation: ClassifierBuilderFunction<'a, 
     member this.Bind<'d, 'e>(classifier: ClassifierBuilderFunction<'a, 'd, 'c> -> ClassifierBuilderResult<'a, 'e>, f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'e> =
         f
         |> classifier
-
-
-    member this.Bind<'d>(ClassifierBuilder.PickOne(status: ClassifierStatus<'a>, classifiers: ClassifierBuilderContinuationFromStatus<'a,'c,'c,'d> list), f: ClassifierBuilderFunction<'a, 'd, 'c>): ClassifierBuilderResult<'a,'c> =
-        let rec tryClassifier remainingClassifiers =
-            match remainingClassifiers with
-            | [] -> ClassifierBuilderResult.Error (ClassifierError<'a>.OfTokenizerError status (Some Tokenizer.TokenizerError.LookaheadFailure))
-            | classifier :: tail ->
-                match classifier status f with
-                | Ok _ as x -> x
-                | Error _ ->
-                    tryClassifier tail
-        tryClassifier classifiers
 
 
     member this.Bind<'d>(ClassifierBuilder.ZeroOrOne(status: ClassifierStatus<'a>, classifier: ClassifierBuilderContinuationFromStatus<'a, 'c, 'c, 'd>), f: ClassifierBuilderFunction<'a, 'd option, 'c>): ClassifierBuilderResult<'a,'c> =

@@ -58,7 +58,7 @@ let AcceptAllColumnTypes status continuation =
         let! status = Classifier.discard COMMA status
         let! status = Classifier.discard OPTIONAL_WHITESPACE status
         
-        let! (value, status) = ClassifierBuilderFunction.PickOne [ AcceptColumnNameWithTableName; AcceptColumnName ] status
+        let! (value, status) = ClassifierFunction.PickOne [ AcceptColumnNameWithTableName; AcceptColumnName ] status
         return value, status
     }
 
@@ -70,7 +70,7 @@ let AcceptSQLQuery status =
         let! status = Classifier.discard WHITESPACE status
         
         // Add to token list, and return list of TokenTypes. Uses above parsing expression
-        let! (column1, status) = ClassifierBuilder.PickOne(status, [ AcceptColumnName; AcceptColumnNameWithTableName ])
+        let! (column1, status) = ClassifierFunction.PickOne [ AcceptColumnName; AcceptColumnNameWithTableName ] status
         let! (moreColumns, status) = ClassifierBuilder.ZeroOrMore(status, AcceptAllColumnTypes)
         let allColumns = column1 :: (List.rev moreColumns)
 
