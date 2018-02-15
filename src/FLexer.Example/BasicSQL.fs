@@ -71,8 +71,8 @@ let AcceptSQLQuery status =
         
         // Add to token list, and return list of TokenTypes. Uses above parsing expression
         let! (column1, status) = ClassifierFunction.PickOne [ AcceptColumnName; AcceptColumnNameWithTableName ] status
-        let! (moreColumns, status) = ClassifierBuilder.ZeroOrMore(status, AcceptAllColumnTypes)
-        let allColumns = column1 :: (List.rev moreColumns)
+        let! (moreColumns, status) = ClassifierFunction.ZeroOrMore AcceptAllColumnTypes status
+        let allColumns = column1 :: moreColumns
 
         // Ignore whitespace
         let! status = Classifier.discard WHITESPACE status

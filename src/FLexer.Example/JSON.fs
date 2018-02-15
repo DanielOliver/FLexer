@@ -4,7 +4,6 @@
 open FLexer.Core
 open FLexer.Core.Tokenizer
 open FLexer.Core.Classifier
-open FLexer.Core.ClassifierBuilder
 
 
 /// ######  Lexer words & regex  ######
@@ -99,7 +98,7 @@ let rec AcceptArrayElement arrayType elements originalStatus continuation =
         let! status = discard OPTIONAL_WHITESPACE originalStatus
 
         if List.isEmpty elements then
-            let! (tryFirstValue, status) = ZeroOrOne(status, AcceptJsonObject)
+            let! (tryFirstValue, status) = ClassifierFunction.ZeroOrOne AcceptJsonObject status
             match tryFirstValue with
             | None -> 
                 return [], status
@@ -168,7 +167,7 @@ and AcceptRecordKeyPairs elements status continuation =
         let! status = discard OPTIONAL_WHITESPACE status
 
         if List.isEmpty elements then
-            let! (tryFirstValue, status) = ZeroOrOne(status, AcceptJsonKeyPair)
+            let! (tryFirstValue, status) = ClassifierFunction.ZeroOrOne AcceptJsonKeyPair status
             match tryFirstValue with
             | None -> 
                 return [], status
