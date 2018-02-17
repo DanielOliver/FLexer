@@ -70,8 +70,8 @@ module ClassifierFunction =
         tryClassifier classifiers
         
     /// Replacement for single case discriminated union.
-    let PickOneConsumer<'a,'c,'d> (classifiers: (ClassifierStatus<'a> -> ClassifierResult<'a>) list) =
-        PickOne (classifiers |> List.map classifierToBuilderFunction)
+    let PickOneConsumer<'a,'c> (classifiers: (ClassifierStatus<'a> -> ClassifierResult<'a>) list) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string, 'c>) =
+        PickOne (classifiers |> List.map classifierToBuilderFunction) status continuation
         
     /// Replacement for single case discriminated union.
     let ZeroOrMore<'a,'c,'d> (classifier: ClassifierBuilderContinuationFromStatus<'a,'d,'d,'d>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, 'd list, 'c>) =
@@ -94,8 +94,8 @@ module ClassifierFunction =
         testStatus statusList valueList
             
     /// Replacement for single case discriminated union.
-    let ZeroOrMoreConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) =
-        ZeroOrMore (classifierToBuilderFunction classifier)
+    let ZeroOrMoreConsumer<'a,'c> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string list, 'c>) =
+        ZeroOrMore (classifierToBuilderFunction classifier) status continuation
         
     /// Replacement for single case discriminated union.
     let OneOrMore<'a,'c,'d> (classifier: ClassifierBuilderContinuationFromStatus<'a,'d,'d,'d>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, 'd list, 'c>) =
@@ -118,8 +118,8 @@ module ClassifierFunction =
         testStatus statusList valueList
         
     /// Replacement for single case discriminated union.
-    let OneOrMoreConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) =
-        OneOrMore (classifierToBuilderFunction classifier)
+    let OneOrMoreConsumer<'a,'c> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>)  (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string list, 'c>)  =
+        OneOrMore (classifierToBuilderFunction classifier) status continuation
 
     /// Replacement for single case discriminated union.
     let ZeroOrOne<'a,'c,'d> (classifier: ClassifierBuilderContinuationFromStatus<'a,'c,'c,'d>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, 'd option, 'c>) =
@@ -128,8 +128,8 @@ module ClassifierFunction =
         | Error _ -> (None, status) |> continuation
     
     /// Replacement for single case discriminated union.
-    let ZeroOrOneConsumer<'a,'c,'d> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) =
-        ZeroOrOne (classifierToBuilderFunction classifier)
+    let ZeroOrOneConsumer<'a,'c> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string option, 'c>) =
+        ZeroOrOne (classifierToBuilderFunction classifier) status continuation
 
 
 /// A computation expression to compose functions with

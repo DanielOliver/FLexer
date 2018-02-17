@@ -13,6 +13,7 @@
     <Compile Include="TokenizerOperatorTests.fs" />
     <Compile Include="TokenizerDefinedTests.fs" />
     <Compile Include="ClassifierTests.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="nunit" Version="3.9.0" />
