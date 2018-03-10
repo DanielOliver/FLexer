@@ -186,12 +186,16 @@ let Example() =
 //
 // LookaheadFailure
 //
-// --  Consumed Tokens  ----------------------------------------------------------------
-//  StartChar  |     EndChar  |                  Text  |                  Classification
+// --  Consumed Text  ------------------------------------------------------------------
+//                           Text     Length
 // -------------------------------------------------------------------------------------
-//          0  |           5  |                SELECT  |  Select
-//          7  |          13  |               Column1  |  ColumnName "Column1"
-//         16  |          22  |               Column2  |  ColumnName "Column2"
+//                         SELECT  |           6
+//                   (Whitespace)  |           1
+//                        Column1  |           7
+//                              ,  |           1
+//                   (Whitespace)  |           1
+//                        Column2  |           7
+//                              ,  |           1
 //
 //
 //   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***

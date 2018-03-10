@@ -8,6 +8,13 @@ let PrintTokens (consumed: Tokenizer.Token<_> list) =
     printfn "-------------------------------------------------------------------------------------"
     consumed |> List.rev |> List.iter (fun t -> printfn "%10i  |  %10i  |  %20s  |  %30A" t.StartCharacter t.EndCharacter t.Text t.Classification)
 
+let PrintConsumedWords (consumed: string list) =
+    printfn "--  Consumed Text  ------------------------------------------------------------------"
+    printfn "%30s %10s" "Text" "Length"
+    printfn "-------------------------------------------------------------------------------------"
+    let whitespacePrint text = if System.String.IsNullOrWhiteSpace text then "(Whitespace)" else text
+    consumed |> List.rev |> List.iter (fun t -> printfn "%30s  |  %10i" (whitespacePrint t) t.Length)
+
 let Spacer() =
     printfn ""
     printfn ""
@@ -31,5 +38,5 @@ let PrintBuilderResults formatValue stringToAccept (results: ClassifierBuilderRe
         | Some x ->
             printfn "%A" x
             printfn ""        
-        PrintTokens err.LastStatus.Consumed
+        PrintConsumedWords err.LastStatus.ConsumedWords
 
