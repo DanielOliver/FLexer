@@ -17,27 +17,27 @@ type ClassifierBuilderContinuation<'a,'b,'c,'d> = ClassifierBuilderFunction<'a, 
 
 /// Operate on Classifier Results
 module ClassifierBuilderResult =
+    let getConsumedLength (value: ClassifierBuilderResult<_,_>): int =
+        match value with
+        | Ok(_, x) -> x.ConsumedLength
+        | Error(x) -> x.ConsumedLength
+
+    let getLongestError (backupValue: ClassifierBuilderResult<_,_>) (testValue: ClassifierBuilderResult<_,_>): ClassifierBuilderResult<_,_> =
+        match testValue with
+        | Ok _ -> testValue
+        | Error _ -> 
+            match backupValue with
+            | Ok _ -> backupValue
+            | Error _ ->
+                if getConsumedLength testValue >= getConsumedLength backupValue then testValue
+                else backupValue
+
     let mapValue mapper (value: 'b, status: ClassifierStatus<'a>) =
         (mapper value, status)
 
     let map mapper (result: ClassifierBuilderResult<_,_>): ClassifierBuilderResult<_,_> =
         result
-        |> Result.map(fun (b, status) -> mapper b, status)
-
-    let continueError (error: ClassifierBuilderResult<_,_>): ClassifierBuilderResult<_,_> =
-        match error with
-        | Ok _ as x -> x
-        | Error err -> Error err
-
-    let bind (binder: ClassifierBuilderFunction<'a, 'b, 'c>) (result: ClassifierBuilderResult<'a,'b>): ClassifierBuilderResult<'a,'c> =
-        result 
-        |> Result.bind binder
-
-    let defaultIfError (defaultValue: unit -> ClassifierBuilderResult<'a,'b>) (result: ClassifierBuilderResult<'a,'b>): ClassifierBuilderResult<'a,'b> =
-        match result with
-        | Ok _ -> result
-        | Error _ -> defaultValue() 
-        
+        |> Result.map(fun (b, status) -> mapper b, status)        
 
 /// An alias for continuation functions.
 module Continuation =
@@ -98,8 +98,9 @@ module ClassifierFunction =
             | classifier :: tail ->
                 match classifier status continuation with
                 | Ok _ as x -> x
-                | Error _ ->
+                | Error _ as x ->
                     tryClassifier tail
+                    |> ClassifierBuilderResult.getLongestError x
         tryClassifier classifiers
         
     /// Replacement for single case discriminated union.
@@ -110,7 +111,10 @@ module ClassifierFunction =
     let ZeroOrOne<'a,'c,'d> (classifier: ClassifierBuilderContinuationFromStatus<'a,'c,'c,'d>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, 'd option, 'c>) =
         match classifier status (ClassifierBuilderResult.mapValue (Some) >> continuation) with
         | Ok _ as x -> x
-        | Error _ -> (None, status) |> continuation
+        | Error _ as x -> 
+            (None, status) 
+            |> continuation
+            |> ClassifierBuilderResult.getLongestError x
     
     /// Replacement for single case discriminated union.
     let ZeroOrOneConsumer<'a,'c> (classifier: ClassifierStatus<'a> -> ClassifierResult<'a>) (status: ClassifierStatus<'a>) (continuation: ClassifierBuilderFunction<'a, string option, 'c>) =

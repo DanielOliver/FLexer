@@ -22,12 +22,15 @@ type ClassifierStatus<'t> =
 
     member this.Classification = this.Consumed.Head.Classification
     member this.ConsumedText = this.ConsumedWords.Head
+    member this.ConsumedLength = this.CurrentChar
 
 
 type ClassifierError<'t> =
     {   LastStatus: ClassifierStatus<'t>
         TokenizerError: Tokenizer.TokenizerError option
     }
+    
+    member this.ConsumedLength = this.LastStatus.CurrentChar
 
     static member OfTokenizerError classifierStatus tokenizerError =
         {   LastStatus = classifierStatus
