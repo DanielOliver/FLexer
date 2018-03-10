@@ -160,7 +160,6 @@ let Example() =
         |> (FLexer.Example.Utility.PrintBuilderResults (printfn "%A") stringToTest)
     )
 
-
 //   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
 // -------------------------------------------------------------------------------------
 // Accepted "SELECT  LastName, FirstName, ID  , BirthDay  FROM Contacts"
@@ -191,6 +190,8 @@ let Example() =
 //  StartChar  |     EndChar  |                  Text  |                  Classification
 // -------------------------------------------------------------------------------------
 //          0  |           5  |                SELECT  |  Select
+//          7  |          13  |               Column1  |  ColumnName "Column1"
+//         16  |          22  |               Column2  |  ColumnName "Column2"
 //
 //
 //   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***   ***
