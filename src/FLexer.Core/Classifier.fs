@@ -21,12 +21,16 @@ type ClassifierStatus<'t> =
         }
 
     member this.Classification = this.Consumed.Head.Classification
+    member this.ConsumedText = this.ConsumedWords.Head
+    member this.ConsumedLength = this.CurrentChar
 
 
 type ClassifierError<'t> =
     {   LastStatus: ClassifierStatus<'t>
         TokenizerError: Tokenizer.TokenizerError option
     }
+    
+    member this.ConsumedLength = this.LastStatus.CurrentChar
 
     static member OfTokenizerError classifierStatus tokenizerError =
         {   LastStatus = classifierStatus
@@ -50,6 +54,9 @@ module Classifier =
 
         
     let private discardClassifierResult (tokenizerStatus: Tokenizer.TokenizerStatus) text (oldClassifierStatus: ClassifierStatus<_>) =
+        if System.String.IsNullOrEmpty text then
+            oldClassifierStatus
+        else
         {   ClassifierStatus.Consumed = oldClassifierStatus.Consumed
             ClassifierStatus.ConsumedWords = text :: oldClassifierStatus.ConsumedWords
             ClassifierStatus.CurrentChar = tokenizerStatus.CurrentChar

@@ -255,3 +255,9 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+# Cake and build stuff
+tools/
+nupkg/
+build/
+.nugetapikey

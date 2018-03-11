@@ -1,0 +1,11 @@
+image: Visual Studio 2017
+build_script:
+  - ps: .\build.ps1
+test: off
+branches:
+  # Whitelist
+  only:
+    - develop
+    - master
+    - /release/.*/
+    - /hotfix/.*/

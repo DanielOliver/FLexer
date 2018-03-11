@@ -8,5 +8,6 @@ open FLexer.Example
 let main argv =
 
     BasicSQL.Example()
+    JSON.Example()
 
     0 // return an integer exit code

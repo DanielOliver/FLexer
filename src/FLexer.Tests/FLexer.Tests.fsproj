@@ -13,10 +13,14 @@
     <Compile Include="TokenizerOperatorTests.fs" />
     <Compile Include="TokenizerDefinedTests.fs" />
     <Compile Include="ClassifierTests.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="nunit" Version="3.9.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.9.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.3.4" />
   </ItemGroup>
 </Project>

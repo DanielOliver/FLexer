@@ -1,10 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>0.1.1</Version>
+    <PackageId>FLexer</PackageId>
+    <Authors>Daniel Oliver</Authors>
+    <Company />
+    <Product>FLexer</Product>
+    <Description>FLexer is a F# Lexer and Parser dedicated to ease of use and expressiveness in creating custom recursive-descent parsers.</Description>
+    <PackageLicenseUrl>https://github.com/DanielOliver/FLexer/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/DanielOliver/FLexer</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DanielOliver/FLexer</RepositoryUrl>
+    <PackageTags>f#, parser, lexer</PackageTags>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Tokenizer.fs" />
     <Compile Include="Classifier.fs" />
     <Compile Include="ClassifierBuilder.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.3.4" />
   </ItemGroup>
 </Project>

@@ -24,3 +24,12 @@ type ExampleTests () =
         
 
         
+    [<Test>]
+    member __.``Verify JSON Examples`` () = 
+        FLexer.Example.JSON.ExampleStrings
+        |> List.iter(fun (shouldAccept, stringToTest) ->
+            stringToTest
+            |> FLexer.Example.JSON.ExampleTester
+            |> (testResult shouldAccept stringToTest)
+        )    
+        
