@@ -5,6 +5,7 @@
 #tool "nuget:?package=GitVersion.CommandLine&version=3.6.5"
 #addin "nuget:?package=Cake.Figlet&version=1.0.0"
 #addin nuget:?package=Cake.Npm
+#addin nuget:?package=Cake.Netlify
 
 ///////////////////////////////////////////////////////////////////////////////
 // ARGUMENTS
@@ -25,6 +26,8 @@ var solutionFile = File("./src/FLexer.sln");
 var nugetVersion = "";
 var semVer = "";
 var nugetApiKey = Argument("NUGET_API_KEY", EnvironmentVariable("NUGET_API_KEY"));
+var netlifySiteID = Argument("NETLIFY_SITE_ID", EnvironmentVariable("NETLIFY_SITE_ID"));
+var netlifyApiKey = Argument("NETLIFY_API_KEY", EnvironmentVariable("NETLIFY_API_KEY"));
 
 var branch = EnvironmentVariable("APPVEYOR_REPO_BRANCH") ?? "";
 var isMasterBranch = branch.ToUpper().Contains("MASTER");
@@ -64,6 +67,7 @@ Task("clean")
     .Does(() =>
 {
     CleanDirectories("./build");
+    CleanDirectories("./node_modules");
     CleanDirectories("./**/bin");
     CleanDirectories("./**/obj");
     CreateDirectory("./build");
@@ -140,8 +144,6 @@ Task("build-fable")
     } else {
         throw new System.Exception("Failed to build Fable");
     }
-
-
 });
 
 Task("pack")
@@ -165,7 +167,7 @@ Task("pack")
     DotNetCorePack("./src/FLexer.Core/FLexer.Core.fsproj", settings);
 });
 
-Task("push")
+Task("push-nuget")
     .IsDependentOn("pack")
     .WithCriteria(() => isRunningOnAppVeyor && isMasterBranch && !isPullRequest && isTagged)
 .Does(() =>
@@ -184,9 +186,16 @@ Task("push")
     }
 });
 
+Task("push-netlify")
+    .IsDependentOn("build-fable")
+    .WithCriteria(() => isRunningOnAppVeyor && isMasterBranch && !isPullRequest)
+.Does(() =>
+{
+    NetlifyDeploy("./public", netlifySiteID, netlifyApiKey);
+});
 
 Task("Default")
-    .IsDependentOn("build-fable")
-    .IsDependentOn("push");
+    .IsDependentOn("push-netlify")
+    .IsDependentOn("push-nuget");
 
 RunTarget(target);
