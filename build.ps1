@@ -230,7 +230,7 @@ if ($Mono) { $cakeArguments += "-mono" }
 $cakeArguments += $ScriptArgs
 
 # restore Paket
-# .\.paket\paket.bootstrapper.exe
+.\.paket\paket.bootstrapper.exe
 
 # Start Cake
 Write-Host "Running build script..."

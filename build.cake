@@ -4,8 +4,6 @@
 
 #tool "nuget:?package=GitVersion.CommandLine&version=3.6.5"
 #addin "nuget:?package=Cake.Figlet&version=1.0.0"
-#tool nuget:?package=Paket
-#addin nuget:?package=Cake.Paket
 #addin nuget:?package=Cake.Npm
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -21,6 +19,7 @@ var configuration = Argument("configuration", "Release");
 
 var projectName = "FLexer";
 var projectFile = File("./src/FLexer.Core/FLexer.Core.fsproj");
+var playgroundProjectFile = File("./src/FLexer.Playground/FLexer.Playground.fsproj");
 var testProjectFile = File("./src/FLexer.Tests/FLexer.Tests.fsproj");
 var solutionFile = File("./src/FLexer.sln");
 var nugetVersion = "";
@@ -106,16 +105,11 @@ Task("restore-nuget-packages")
     Information("Restoring packages for {0}", solutionFile);
 
     DotNetCoreRestore(projectFile);
-    DotNetCoreRestore(projectFile);
-});
-
-Task("paket-restore")
-    .Does(() =>
-{
-    PaketRestore();
+    DotNetCoreRestore(playgroundProjectFile);
 });
 
 Task("npm-install")
+    .IsDependentOn("clean")
     .Does(() =>
 {
     NpmInstall();
@@ -125,6 +119,29 @@ Task("test")
     .Does(() =>
 {
     DotNetCoreTest(testProjectFile);
+});
+
+
+Task("build-fable")
+    .IsDependentOn("restore-nuget-packages")
+    .IsDependentOn("npm-install")
+    .Does(() =>
+{
+    var exitCodeWithArgument =
+        StartProcess(
+            "dotnet",
+            new ProcessSettings {
+                Arguments = "fable npm-run build",
+                WorkingDirectory = Directory("./src/FLexer.Playground")
+            });
+    // This should output 0 as valid arguments supplied
+    if(exitCodeWithArgument == 0) {
+        Information("Built Fable");
+    } else {
+        throw new System.Exception("Failed to build Fable");
+    }
+
+
 });
 
 Task("pack")
@@ -169,8 +186,7 @@ Task("push")
 
 
 Task("Default")
-    .IsDependentOn("npm-install")
-    .IsDependentOn("paket-restore")
+    .IsDependentOn("build-fable")
     .IsDependentOn("push");
 
 RunTarget(target);
