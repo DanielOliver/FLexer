@@ -4,6 +4,9 @@
 
 #tool "nuget:?package=GitVersion.CommandLine&version=3.6.5"
 #addin "nuget:?package=Cake.Figlet&version=1.0.0"
+#tool nuget:?package=Paket
+#addin nuget:?package=Cake.Paket
+#addin nuget:?package=Cake.Npm
 
 ///////////////////////////////////////////////////////////////////////////////
 // ARGUMENTS
@@ -106,6 +109,18 @@ Task("restore-nuget-packages")
     DotNetCoreRestore(projectFile);
 });
 
+Task("paket-restore")
+    .Does(() =>
+{
+    PaketRestore();
+});
+
+Task("npm-install")
+    .Does(() =>
+{
+    NpmInstall();
+});
+
 Task("test")
     .Does(() =>
 {
@@ -154,6 +169,8 @@ Task("push")
 
 
 Task("Default")
+    .IsDependentOn("npm-install")
+    .IsDependentOn("paket-restore")
     .IsDependentOn("push");
 
 RunTarget(target);
