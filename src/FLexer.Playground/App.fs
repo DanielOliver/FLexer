@@ -6,10 +6,15 @@ open Elmish.Browser.UrlParser
 open Fable.Helpers.React
 open App.State
 
-let root model dispatch =
-    p []
-      [ str "hello world"  ]
 
+
+let root model dispatch =
+    let one = FLexer.Example.Core.BasicSQL.ExampleTester "SELECT  LastName  FROM Contacts"
+    match one with
+    | Ok(x,y) ->
+        p [] (y.ConsumedWords |> List.rev |> List.map(str))
+    | Error x ->
+        p [] [ str x.LastStatus.ConsumedText ]
 
 open Elmish.React
 open Elmish.Debug

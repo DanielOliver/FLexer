@@ -7,11 +7,10 @@ open FLexer.Core.Tokenizer
 /// ######  Lexer words & regex  ######
 let SELECT = Consumers.TakeWord "SELECT" true
 let FROM = Consumers.TakeWord "FROM" true
-let WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])+"
+let WHITESPACE = Consumers.TakeRegex @"(\s|[\r\n])+"
 let COMMA = Consumers.TakeChar ','
 let PERIOD = Consumers.TakeChar '.'
-let OPTIONAL_WHITESPACE = Consumers.TakeRegex "(\s|[\r\n])*"
-let IDENTIFIER = Consumers.TakeRegex "[A-Za-z][A-Za-z0-9]*"
+let IDENTIFIER = Consumers.TakeRegex @"[A-Za-z][A-Za-z0-9]*"
 
 
 /// ######  Parser Identifiers  ######
@@ -32,9 +31,9 @@ type SQLQuery =
         Table: string
     }
 
-
-
 /// ######  Parser Functions  ######
+let OPTIONAL_WHITESPACE status = ClassifierFunction.ZeroOrOneConsumer (Classifier.discard WHITESPACE) status
+
 let AcceptColumnName status continuation =
     Classifiers.sub continuation {
         let! status = Classifier.map TokenType.ColumnName IDENTIFIER status
@@ -54,9 +53,9 @@ let AcceptColumnNameWithTableName status continuation =
 
 let AcceptAllColumnTypes status continuation =
     Classifiers.sub continuation {
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! (_,status) = OPTIONAL_WHITESPACE status
         let! status = Classifier.discard COMMA status
-        let! status = Classifier.discard OPTIONAL_WHITESPACE status
+        let! (_,status) = OPTIONAL_WHITESPACE status
         
         let! (value, status) = ClassifierFunction.PickOne [ AcceptColumnNameWithTableName; AcceptColumnName ] status
         return value, status
