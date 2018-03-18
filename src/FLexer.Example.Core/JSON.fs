@@ -1,4 +1,4 @@
-﻿module FLexer.Example.JSON
+module FLexer.Example.Core.JSON
 
 
 open FLexer.Core
@@ -270,5 +270,5 @@ let Example() =
     |> List.iter(fun (_, stringToTest) ->
         stringToTest
         |> ExampleTester
-        |> (FLexer.Example.Utility.PrintBuilderResults (printfn "%A") stringToTest)
-    )    
+        |> (FLexer.Example.Core.Utility.PrintBuilderResults (printfn "%A") stringToTest)
+    )

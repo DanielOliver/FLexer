@@ -5,11 +5,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FLexer.Core\FLexer.Core.fsproj" />
+    <ProjectReference Include="..\FLexer.Example.Core\FLexer.Example.Core.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Utility.fs" />
-    <Compile Include="JSON.fs" />
-    <Compile Include="BasicSQL.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

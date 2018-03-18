@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Utility.fs" />
+    <Compile Include="BasicSQL.fs" />
+    <Compile Include="JSON.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FLexer.Core\FLexer.Core.fsproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,4 @@
-﻿namespace FLexer.Tests
+namespace FLexer.Tests
 
 open NUnit.Framework
 open FLexer.Core
@@ -15,10 +15,10 @@ type ExampleTests () =
             
     [<Test>]
     member __.``Verify BasicSQL Examples`` () = 
-        FLexer.Example.BasicSQL.ExampleStrings
+        FLexer.Example.Core.BasicSQL.ExampleStrings
         |> List.iter(fun (shouldAccept, stringToTest) ->
             stringToTest
-            |> FLexer.Example.BasicSQL.ExampleTester
+            |> FLexer.Example.Core.BasicSQL.ExampleTester
             |> (testResult shouldAccept stringToTest)
         )    
         
@@ -26,10 +26,10 @@ type ExampleTests () =
         
     [<Test>]
     member __.``Verify JSON Examples`` () = 
-        FLexer.Example.JSON.ExampleStrings
+        FLexer.Example.Core.JSON.ExampleStrings
         |> List.iter(fun (shouldAccept, stringToTest) ->
             stringToTest
-            |> FLexer.Example.JSON.ExampleTester
+            |> FLexer.Example.Core.JSON.ExampleTester
             |> (testResult shouldAccept stringToTest)
         )    
         

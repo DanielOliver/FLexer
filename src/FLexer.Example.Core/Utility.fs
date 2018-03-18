@@ -1,4 +1,4 @@
-module FLexer.Example.Utility
+module FLexer.Example.Core.Utility
 
 open FLexer.Core
 

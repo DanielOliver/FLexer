@@ -6,9 +6,11 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FLexer.Core", "FLexer.Core\
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FLexer.Tests", "FLexer.Tests\FLexer.Tests.fsproj", "{67599305-39A8-4CAD-BA80-B7E3E0BC4A6A}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FLexer.Example", "FLexer.Example\FLexer.Example.fsproj", "{E70901BD-475C-418E-B4A5-9217BE1885E0}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FLexer.Example", "FLexer.Example\FLexer.Example.fsproj", "{E70901BD-475C-418E-B4A5-9217BE1885E0}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FLexer.Playground", "FLexer.Playground\FLexer.Playground.fsproj", "{6D4CCDCA-4F66-4042-9464-836998E12558}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FLexer.Example.Core", "FLexer.Example.Core\FLexer.Example.Core.fsproj", "{C1636ABB-9518-4D72-B172-3C1B543C5D7D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -68,6 +70,18 @@ Global
 		{6D4CCDCA-4F66-4042-9464-836998E12558}.Release|x64.Build.0 = Release|Any CPU
 		{6D4CCDCA-4F66-4042-9464-836998E12558}.Release|x86.ActiveCfg = Release|Any CPU
 		{6D4CCDCA-4F66-4042-9464-836998E12558}.Release|x86.Build.0 = Release|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Debug|x64.Build.0 = Debug|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Debug|x86.Build.0 = Debug|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Release|x64.ActiveCfg = Release|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Release|x64.Build.0 = Release|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Release|x86.ActiveCfg = Release|Any CPU
+		{C1636ABB-9518-4D72-B172-3C1B543C5D7D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,13 +1,9 @@
-﻿module FLexer.Example.Program
-
-open FLexer.Example
-
-
+module FLexer.Example.Program
 
 [<EntryPoint>]
 let main argv =
 
-    BasicSQL.Example()
-    JSON.Example()
+    FLexer.Example.Core.BasicSQL.Example()
+    FLexer.Example.Core.JSON.Example()
 
     0 // return an integer exit code

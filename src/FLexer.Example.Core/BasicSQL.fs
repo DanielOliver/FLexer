@@ -1,4 +1,4 @@
-module FLexer.Example.BasicSQL
+module FLexer.Example.Core.BasicSQL
 
 open FLexer.Core
 open FLexer.Core.Tokenizer
@@ -108,5 +108,5 @@ let Example() =
     |> List.iter(fun (_, stringToTest) ->
         stringToTest
         |> ExampleTester
-        |> (FLexer.Example.Utility.PrintBuilderResults (printfn "%A") stringToTest)
-    )    
+        |> (FLexer.Example.Core.Utility.PrintBuilderResults (printfn "%A") stringToTest)
+    )

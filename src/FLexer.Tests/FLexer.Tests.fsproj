@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FLexer.Core\FLexer.Core.fsproj" />
-    <ProjectReference Include="..\FLexer.Example\FLexer.Example.fsproj" />
+    <ProjectReference Include="..\FLexer.Example.Core\FLexer.Example.Core.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Utility.fs" />
