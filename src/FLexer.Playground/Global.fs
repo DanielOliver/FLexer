@@ -1,8 +1,10 @@
 module Global
 
 type Page =
-  | Home
+  | ExampleJSON
+  | ExampleSQL
 
 let toHash page =
   match page with
-  | Home -> "#home"
+  | ExampleJSON -> "#examplejson"
+  | ExampleSQL -> "#examplesql"
