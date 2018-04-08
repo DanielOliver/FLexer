@@ -42,15 +42,15 @@ let root (model: Types.Model) dispatch =
         | Types.Page.ExampleJSON -> text |> Types.Msg.ExampleJSON |> dispatch
         | Types.Page.ExampleSQL -> text |> Types.Msg.ExampleSQL |> dispatch
 
-    R.input
-        [   ClassName "input"
-            Type "text"
+    R.textarea
+        [   Rows 30.0
+            Cols 80.0
             Multiple true
             Placeholder ""
             Value model.CurrentText
             AutoFocus true
             OnChange (fun ev -> !!ev.target?value |> dispatchFunc )
-        ]
+        ] []
 
 open Elmish.React
 open Elmish.Debug
