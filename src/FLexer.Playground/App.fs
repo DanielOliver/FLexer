@@ -10,6 +10,8 @@ open Fable.Helpers.React.Props
 open Fable.Core.JsInterop
 
 
+importAll "../../sass/main.sass"
+
 let init result =
     let (model, cmd) = urlUpdate result Types.Model.ExampleSQL
     printfn "Init %A" model
@@ -41,7 +43,7 @@ let root (model: Types.Model) dispatch =
         match model.CurrentPage with
         | Types.Page.ExampleJSON -> text |> Types.Msg.ExampleJSON |> dispatch
         | Types.Page.ExampleSQL -> text |> Types.Msg.ExampleSQL |> dispatch
-
+    
     R.textarea
         [   Rows 20.0
             Cols 80.0
