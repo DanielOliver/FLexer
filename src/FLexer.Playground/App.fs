@@ -43,7 +43,7 @@ let root (model: Types.Model) dispatch =
         | Types.Page.ExampleSQL -> text |> Types.Msg.ExampleSQL |> dispatch
 
     R.textarea
-        [   Rows 30.0
+        [   Rows 20.0
             Cols 80.0
             Multiple true
             Placeholder ""
