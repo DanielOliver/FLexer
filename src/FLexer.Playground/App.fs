@@ -94,7 +94,7 @@ let getTextTable (status: FLexer.Core.ClassifierStatus<_>) =
     )
     |> createTextTableFromRows
 
-let getParseResult (model: Types.Model) =
+let getParseResultWithTextArea (model: Types.Model) textAreaWithUpdate =
     match model.ParseResult with
     | Types.ParseResult.JSONParse result ->
         match result with
@@ -105,14 +105,22 @@ let getParseResult (model: Types.Model) =
         | Ok(sqlResult, status) -> true, getTokenTable status, getTextTable status
         | Error(error) -> false, getTokenTable error.LastStatus, getTextTable error.LastStatus
     |> (fun (isSuccess, tokenTable, textTable) ->
-        R.div []
-            [   R.h1 [ ClassName "title" ] [ str (if isSuccess then "Success" else "Incomplete") ]
-                R.hr []
-                R.h3 [ ClassName "subtitle" ] [ str "Tokens" ]
-                tokenTable
-                R.hr []
-                R.h3 [ ClassName "subtitle" ] [ str "ConsumedText" ]
-                textTable
+        R.div [ ClassName "columns is-desktop" ]
+            [
+                R.div [ ClassName "column" ]
+                    [
+                        textAreaWithUpdate
+                        R.h1 [ ClassName "title" ] [ str (if isSuccess then "Success" else "Incomplete") ]
+                        R.hr []
+                        R.h3 [ ClassName "subtitle" ] [ str "Tokens" ]
+                        tokenTable
+                        R.hr []
+                    ]
+                R.div [ ClassName "column is-narrow" ]
+                    [
+                        R.h3 [ ClassName "subtitle" ] [ str "ConsumedText" ]
+                        textTable
+                    ]
             ]
     )
 
@@ -142,10 +150,7 @@ let root (model: Types.Model) dispatch =
         |> List.singleton
         |> R.div [ ClassName "field" ]
 
-    R.div []
-        [   textUpdateArea
-            getParseResult model
-        ]
+    getParseResultWithTextArea model textUpdateArea
     |> List.singleton
     |> R.div [ ClassName "container content is-fluid" ]
     |> List.singleton
