@@ -25,16 +25,55 @@ let update (msg:Types.Msg) model =
         Types.Model.ExampleSQL, Cmd.Empty
     | Types.Msg.ExampleJSON jsonText ->
         {
-            ParseResult = Types.ParseResult.JSONParse (FLexer.Example.Core.JSON.ExampleTester jsonText)
+            ParseResult = Types.ParseResult.JSONParse (FLexer.Example.Core.JSON.ExampleTester <| jsonText.Trim())
             CurrentText = jsonText
             CurrentPage = Types.Page.ExampleJSON
         }, Cmd.Empty
     | Types.Msg.ExampleSQL sqlText ->
         {
-            ParseResult = Types.ParseResult.SQLParse (FLexer.Example.Core.BasicSQL.ExampleTester sqlText)
+            ParseResult = Types.ParseResult.SQLParse (FLexer.Example.Core.BasicSQL.ExampleTester <| sqlText.Trim())
             CurrentText = sqlText
             CurrentPage = Types.Page.ExampleSQL
         }, Cmd.Empty
+        
+let createParseResultSuccessTable rows =
+    R.tr []
+        [   R.th [] [ str "StartChar" ]
+            R.th [] [ str "EndChar" ]
+            R.th [] [ str "Text" ]
+            R.th [] [ str "Classification" ]
+        ]
+    :: rows
+    |> 
+    R.table []
+
+let getParseResult (model: Types.Model) =
+    let getSuccessTable (status: FLexer.Core.ClassifierStatus<_>) =
+        let getText text = if System.String.IsNullOrWhiteSpace(text) then "(whitespace)" else text
+
+        status.Consumed
+        |> List.rev
+        |> List.map(fun t ->
+            R.tr []
+                [   R.th [] [ str <| t.StartCharacter.ToString() ]
+                    R.th [] [ str <| t.EndCharacter.ToString() ]
+                    R.th [] [ str <| getText t.Text ]
+                    R.th [] [ str <| t.Classification.ToString() ]
+                ]
+        )
+        |> createParseResultSuccessTable
+
+
+    match model.ParseResult with
+    | Types.ParseResult.JSONParse result ->
+        match result with
+        | Ok(jsonResult, status) -> getSuccessTable status
+        | _ -> str "fail"
+    | Types.ParseResult.SQLParse result -> 
+        match result with
+        | Ok(sqlResult, status) -> getSuccessTable status
+        | _ -> str "fail"
+
 
 let root (model: Types.Model) dispatch =
     printfn "parseModel %A" model.ParseResult
@@ -43,16 +82,24 @@ let root (model: Types.Model) dispatch =
         match model.CurrentPage with
         | Types.Page.ExampleJSON -> text |> Types.Msg.ExampleJSON |> dispatch
         | Types.Page.ExampleSQL -> text |> Types.Msg.ExampleSQL |> dispatch
-    
-    R.textarea
-        [   Rows 20.0
-            Cols 80.0
-            Multiple true
-            Placeholder ""
-            Value model.CurrentText
-            AutoFocus true
-            OnChange (fun ev -> !!ev.target?value |> dispatchFunc )
-        ] []
+
+    let textUpdateArea =
+        R.textarea
+            [   Rows 10.0
+                Cols 80.0
+                Multiple true
+                Placeholder ""
+                Value model.CurrentText
+                AutoFocus true
+                OnChange (fun ev -> !!ev.target?value |> dispatchFunc )
+            ] []
+
+    R.div []
+        [   textUpdateArea
+            getParseResult model
+        ]
+
+
 
 open Elmish.React
 open Elmish.Debug
