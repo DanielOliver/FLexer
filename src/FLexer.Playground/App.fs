@@ -135,7 +135,7 @@ let root (model: Types.Model) dispatch =
                 Value model.CurrentText
                 AutoFocus true
                 OnChange (fun ev -> !!ev.target?value |> dispatchFunc )
-                ClassName "textarea is-focused"
+                ClassName "textarea is-focused is-medium"
             ] []
         |> List.singleton
         |> R.div [ ClassName "control" ]
@@ -147,7 +147,7 @@ let root (model: Types.Model) dispatch =
             getParseResult model
         ]
     |> List.singleton
-    |> R.div [ ClassName "container is-fluid" ]
+    |> R.div [ ClassName "container content is-fluid" ]
     |> List.singleton
     |> R.section [ ClassName "section" ]
 

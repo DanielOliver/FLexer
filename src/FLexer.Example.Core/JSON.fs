@@ -18,8 +18,8 @@ let Comma = Consumers.TakeChar ','
 let NULL = Consumers.TakeWord "null" false
 let TRUE = Consumers.TakeWord "true" false
 let FALSE = Consumers.TakeWord "false" false
-let StringLiteral = Consumers.TakeRegex "([\\\\][\"]|[^\"])*"
-let OPTIONAL_WHITESPACE = Consumers.TakeRegex @"(\s|[\r\n])*"
+let StringLiteral = Consumers.TakeRegex "([\\\\][\"]|[^\"])+"
+let WHITESPACE = Consumers.TakeRegex @"(\s|[\r\n])+"
 let NumberRegex = Consumers.TakeRegex "([-]){0,1}[0-9]+([.]([0-9])+){0,1}((e|E)([+]|[-]){0,1}[0-9]+){0,1}"
 
 
@@ -56,6 +56,8 @@ type JsonValueType =
 
   
 /// ######  Primitive Parser Functions  ######
+let OPTIONAL_WHITESPACE status = ClassifierFunction.ZeroOrOneConsumer (Classifier.discard WHITESPACE) status
+
 let rec AcceptBooleanTrue status continuation =
     Classifiers.sub continuation {
         let! status = name (JsonValue.Boolean true) TRUE status
@@ -82,12 +84,11 @@ and AcceptNumber status continuation =
     
 and AcceptStringLiteral status continuation =
     Classifiers.sub continuation {
-        let! status = 
-            status
-            |> discard DoubleQuote
-            |> Result.bind (map (JsonValue.String) StringLiteral)
-            |> Result.bind (discard DoubleQuote)
-        return status.Classification, status
+        let! status = discard DoubleQuote status
+        let! (literal, status) = ClassifierFunction.ZeroOrOneConsumer (map JsonValue.String StringLiteral) status
+        let classification = if literal.IsSome then status.Classification else JsonValue.String ""
+        let! status = discard DoubleQuote status
+        return classification, status
     }
 
 
@@ -95,7 +96,7 @@ and AcceptStringLiteral status continuation =
 /// ######  Recursive Parser Functions  ######
 let rec AcceptArrayElement arrayType elements originalStatus continuation =
     Classifiers.sub continuation {
-        let! status = discard OPTIONAL_WHITESPACE originalStatus
+        let! (_, status) = OPTIONAL_WHITESPACE originalStatus
 
         if List.isEmpty elements then
             let! (tryFirstValue, status) = ClassifierFunction.ZeroOrOne AcceptJsonObject status
@@ -107,7 +108,7 @@ let rec AcceptArrayElement arrayType elements originalStatus continuation =
         else
             match discard Comma status with 
             | Ok(status) -> 
-                let! status = discard OPTIONAL_WHITESPACE status
+                let! (_, status) = OPTIONAL_WHITESPACE status
 
                 let! (value, status) = AcceptJsonObject status
 
@@ -125,20 +126,17 @@ and AcceptFirstArrayElement status continuation =
 
 and AcceptArray status continuation =
     Classifiers.sub continuation {
-
-        let! status = 
-            status
-            |> discard OPTIONAL_WHITESPACE
-            |> Result.bind (discard LeftBracket)
-            |> Result.bind (discard OPTIONAL_WHITESPACE)
+        
+        let! (_, status) = OPTIONAL_WHITESPACE status
+        let! status = discard LeftBracket status
+        let! (_, status) = OPTIONAL_WHITESPACE status
 
         let! (items, status) = AcceptFirstArrayElement status
+
         
-        let! status = 
-            status
-            |> discard OPTIONAL_WHITESPACE
-            |> Result.bind (discard RightBracket)
-            |> Result.bind (discard OPTIONAL_WHITESPACE)
+        let! (_, status) = OPTIONAL_WHITESPACE status
+        let! status = discard RightBracket status
+        let! (_, status) = OPTIONAL_WHITESPACE status
 
         let finalValues = items |> Seq.rev |> Array.ofSeq
         return (JsonValue.Array finalValues), status
@@ -146,25 +144,24 @@ and AcceptArray status continuation =
 
 and AcceptJsonKeyPair status continuation =
     Classifiers.sub continuation {
-        let! status = discard OPTIONAL_WHITESPACE status
+        let! (_, status) = OPTIONAL_WHITESPACE status
         
         let! (keyName, status) = AcceptStringLiteral status
         let keyNameText = match keyName with | JsonValue.String str -> str | _ -> failwith "Should never reach this."
-
-        let! status = 
-            status
-            |> discard OPTIONAL_WHITESPACE
-            |> Result.bind (discard Colon)
-            |> Result.bind (discard OPTIONAL_WHITESPACE)
+        
+        
+        let! (_, status) = OPTIONAL_WHITESPACE status
+        let! status = discard Colon status
+        let! (_, status) = OPTIONAL_WHITESPACE status
 
         let! (value, status) = AcceptJsonObject status
-        let! status = discard OPTIONAL_WHITESPACE status
+        let! (_, status) = OPTIONAL_WHITESPACE status
         return (keyNameText, value), status
     }
 
 and AcceptRecordKeyPairs elements status continuation =
     Classifiers.sub continuation {
-        let! status = discard OPTIONAL_WHITESPACE status
+        let! (_, status) = OPTIONAL_WHITESPACE status
 
         if List.isEmpty elements then
             let! (tryFirstValue, status) = ClassifierFunction.ZeroOrOne AcceptJsonKeyPair status
@@ -174,11 +171,11 @@ and AcceptRecordKeyPairs elements status continuation =
             | Some firstValue ->
                 return! AcceptRecordKeyPairs [ firstValue ] status
         else
-            let! status = discard OPTIONAL_WHITESPACE status
+            let! (_, status) = OPTIONAL_WHITESPACE status
             let result = discard Comma status
             match result with 
             | Ok(status) -> 
-                let! status = discard OPTIONAL_WHITESPACE status
+                let! (_, status) = OPTIONAL_WHITESPACE status
 
                 let! (value, status) = AcceptJsonKeyPair status
                 return! AcceptRecordKeyPairs (value :: elements) status
@@ -189,31 +186,29 @@ and AcceptRecordKeyPairs elements status continuation =
 
 and AcceptJsonRecord status continuation =
     Classifiers.sub continuation {
-
-        let! status = 
-            status
-            |> discard OPTIONAL_WHITESPACE
-            |> Result.bind (discard CurlyLeftBracket)
-            |> Result.bind (discard OPTIONAL_WHITESPACE)
+        
+        let! (_, status) = OPTIONAL_WHITESPACE status
+        let! status = discard CurlyLeftBracket status
+        let! (_, status) = OPTIONAL_WHITESPACE status
                 
         let! (items, status) = AcceptRecordKeyPairs [] status
         let finalValue = items |> List.rev |> Array.ofList
         
-        let! status = 
-            status
-            |> discard OPTIONAL_WHITESPACE
-            |> Result.bind (discard CurlyRightBracket)
-            |> Result.bind (discard OPTIONAL_WHITESPACE)
+
+        let! (_, status) = OPTIONAL_WHITESPACE status
+        let! status = discard CurlyRightBracket status
+        let! (_, status) = OPTIONAL_WHITESPACE status
+        
         
         return (JsonValue.Record finalValue), status        
     }
 
 and AcceptJsonObject status continuation =
     Classifiers.sub continuation {
-
-        let! status = discard OPTIONAL_WHITESPACE status
+        
+        let! (_, status) = OPTIONAL_WHITESPACE status
         let! (value, status) = ClassifierFunction.PickOne [ AcceptNull; AcceptNumber; AcceptStringLiteral; AcceptBooleanFalse; AcceptBooleanTrue; AcceptJsonRecord; AcceptArray ] status
-        let! status = discard OPTIONAL_WHITESPACE status
+        let! (_, status) = OPTIONAL_WHITESPACE status
 
         return value, status
     }
@@ -263,6 +258,33 @@ let ExampleStrings =
         }
     }
 } """
+        true, """
+{"widget": {
+    "debug": "on",
+    "window": {
+        "title": "Sample Konfabulator Widget",
+        "name": "main_window",
+        "width": 500,
+        "height": 500
+    },
+    "image": { 
+        "src": "Images/Sun.png",
+        "name": "sun1",
+        "hOffset": 250,
+        "vOffset": 250,
+        "alignment": "center"
+    },
+    "text": {
+        "data": "Click Here",
+        "size": 36,
+        "style": "bold",
+        "name": "text1",
+        "hOffset": 250,
+        "vOffset": 100,
+        "alignment": "center",
+        "onMouseUp": "sun1.opacity = (sun1.opacity / 100) * 90;"
+    }
+}}"""
     ]
 
 let Example() =
