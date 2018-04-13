@@ -36,7 +36,7 @@ let update (msg:Types.Msg) model =
             CurrentPage = Types.Page.ExampleSQL
         }, Cmd.Empty
 
-let createParseResultSuccessTable rows =
+let createTokenTableFromRows rows =
     [   R.thead []
             [   R.tr []
                     [   R.th [] [ str "StartChar" ]
@@ -52,35 +52,67 @@ let createParseResultSuccessTable rows =
         [   ClassName "table is-bordered is-narrow is-hoverable is-fullwidth"
         ]
 
-let getParseResult (model: Types.Model) =
-    let getSuccessTable (status: FLexer.Core.ClassifierStatus<_>) =
-        let getText text = if System.String.IsNullOrWhiteSpace(text) then "(whitespace)" else text
+let createTextTableFromRows rows =
+    [   R.thead []
+            [   R.tr []
+                    [   R.th [] [ str "Text" ]
+                    ]
+            ]
+        R.tbody [] rows
+    ]
+    |>
+    R.table
+        [   ClassName "table is-bordered is-narrow is-hoverable is-fullwidth"
+        ]
 
-        status.Consumed
-        |> List.rev
-        |> List.mapi(fun index t ->
-            R.tr [ Id <| index.ToString() ]
-                [   R.td [] [ str <| t.StartCharacter.ToString() ]
-                    R.td [] [ str <| t.EndCharacter.ToString() ]
-                    R.td [] [ str <| getText t.Text ]
-                    R.td [] [ str <| t.Classification.ToString() ]
-                ]
-        )
-        |> createParseResultSuccessTable
-        
+let isWhitespace = System.String.IsNullOrWhiteSpace
+let getText text = if isWhitespace text then "(whitespace)" else text
+let italicizeIfWhitespace text =
+    R.str (getText text)
+    |> (if isWhitespace text then List.singleton >> (R.i []) else id)
+
+let getTokenTable (status: FLexer.Core.ClassifierStatus<_>) =
+    status.Consumed
+    |> List.rev
+    |> List.mapi(fun index t ->
+        R.tr [ Id <| index.ToString() ]
+            [   R.td [] [ str <| t.StartCharacter.ToString() ]
+                R.td [] [ str <| t.EndCharacter.ToString() ]
+                R.td [] [ italicizeIfWhitespace t.Text ]
+                R.td [] [ str <| t.Classification.ToString() ]
+            ]
+    )
+    |> createTokenTableFromRows
+
+let getTextTable (status: FLexer.Core.ClassifierStatus<_>) =
+    status.ConsumedWords
+    |> List.rev
+    |> List.mapi(fun index t ->
+        R.tr [ Id <| index.ToString() ]
+             [   R.td [] [ italicizeIfWhitespace t ]
+             ]
+    )
+    |> createTextTableFromRows
+
+let getParseResult (model: Types.Model) =
     match model.ParseResult with
     | Types.ParseResult.JSONParse result ->
         match result with
-        | Ok(jsonResult, status) -> true, getSuccessTable status
-        | Error(error) -> false, getSuccessTable error.LastStatus
+        | Ok(jsonResult, status) -> true, getTokenTable status, getTextTable status
+        | Error(error) -> false, getTokenTable error.LastStatus, getTextTable error.LastStatus
     | Types.ParseResult.SQLParse result ->
         match result with
-        | Ok(sqlResult, status) -> true, getSuccessTable status
-        | Error(error) -> false, getSuccessTable error.LastStatus
-    |> (fun (isSuccess, table) ->
+        | Ok(sqlResult, status) -> true, getTokenTable status, getTextTable status
+        | Error(error) -> false, getTokenTable error.LastStatus, getTextTable error.LastStatus
+    |> (fun (isSuccess, tokenTable, textTable) ->
         R.div []
-            [   R.h2 [ ClassName "title" ] [ str (if isSuccess then "Success" else "Incomplete") ]
-                table
+            [   R.h1 [ ClassName "title" ] [ str (if isSuccess then "Success" else "Incomplete") ]
+                R.hr []
+                R.h3 [ ClassName "subtitle" ] [ str "Tokens" ]
+                tokenTable
+                R.hr []
+                R.h3 [ ClassName "subtitle" ] [ str "ConsumedText" ]
+                textTable
             ]
     )
 
@@ -114,6 +146,10 @@ let root (model: Types.Model) dispatch =
         [   textUpdateArea
             getParseResult model
         ]
+    |> List.singleton
+    |> R.div [ ClassName "container is-fluid" ]
+    |> List.singleton
+    |> R.section [ ClassName "section" ]
 
 
 
