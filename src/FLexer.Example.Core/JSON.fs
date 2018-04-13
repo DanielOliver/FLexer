@@ -235,8 +235,7 @@ let ExampleStrings =
         true, " [ 23498, 09, 45, 123.0e+10, -12e-499, 9.09834E-23 ] "
         false, " [ {}, 09 ] "
         true, """ [ {}, { "key2": { "subObject": [] } }, { "items": [ 7, 8, 9 ] } ] """
-        true, """
-{
+        true, """{
     "glossary": {
         "title": "example glossary",
         "GlossDiv": {
@@ -258,8 +257,7 @@ let ExampleStrings =
         }
     }
 } """
-        true, """
-{"widget": {
+        true, """{"widget": {
     "debug": "on",
     "window": {
         "title": "Sample Konfabulator Widget",
