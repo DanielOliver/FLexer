@@ -37,13 +37,16 @@ let update (msg:Types.Msg) model =
         }, Cmd.Empty
         
 let createParseResultSuccessTable rows =
-    R.tr []
-        [   R.th [] [ str "StartChar" ]
-            R.th [] [ str "EndChar" ]
-            R.th [] [ str "Text" ]
-            R.th [] [ str "Classification" ]
-        ]
-    :: rows
+    [   R.thead []
+            [   R.tr []
+                    [   R.th [] [ str "StartChar" ]
+                        R.th [] [ str "EndChar" ]
+                        R.th [] [ str "Text" ]
+                        R.th [] [ str "Classification" ]
+                    ]
+            ]
+        R.tbody [] rows
+    ]
     |> 
     R.table []
 
@@ -53,12 +56,12 @@ let getParseResult (model: Types.Model) =
 
         status.Consumed
         |> List.rev
-        |> List.map(fun t ->
-            R.tr []
-                [   R.th [] [ str <| t.StartCharacter.ToString() ]
-                    R.th [] [ str <| t.EndCharacter.ToString() ]
-                    R.th [] [ str <| getText t.Text ]
-                    R.th [] [ str <| t.Classification.ToString() ]
+        |> List.mapi(fun index t ->
+            R.tr [ Id <| index.ToString() ]
+                [   R.td [] [ str <| t.StartCharacter.ToString() ]
+                    R.td [] [ str <| t.EndCharacter.ToString() ]
+                    R.td [] [ str <| getText t.Text ]
+                    R.td [] [ str <| t.Classification.ToString() ]
                 ]
         )
         |> createParseResultSuccessTable
