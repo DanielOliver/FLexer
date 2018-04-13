@@ -35,7 +35,7 @@ let update (msg:Types.Msg) model =
             CurrentText = sqlText
             CurrentPage = Types.Page.ExampleSQL
         }, Cmd.Empty
-        
+
 let createParseResultSuccessTable rows =
     [   R.thead []
             [   R.tr []
@@ -47,8 +47,10 @@ let createParseResultSuccessTable rows =
             ]
         R.tbody [] rows
     ]
-    |> 
-    R.table []
+    |>
+    R.table
+        [   ClassName "table is-bordered is-narrow is-hoverable is-fullwidth"
+        ]
 
 let getParseResult (model: Types.Model) =
     let getSuccessTable (status: FLexer.Core.ClassifierStatus<_>) =
@@ -65,17 +67,22 @@ let getParseResult (model: Types.Model) =
                 ]
         )
         |> createParseResultSuccessTable
-
-
+        
     match model.ParseResult with
     | Types.ParseResult.JSONParse result ->
         match result with
-        | Ok(jsonResult, status) -> getSuccessTable status
-        | _ -> str "fail"
-    | Types.ParseResult.SQLParse result -> 
+        | Ok(jsonResult, status) -> true, getSuccessTable status
+        | Error(error) -> false, getSuccessTable error.LastStatus
+    | Types.ParseResult.SQLParse result ->
         match result with
-        | Ok(sqlResult, status) -> getSuccessTable status
-        | _ -> str "fail"
+        | Ok(sqlResult, status) -> true, getSuccessTable status
+        | Error(error) -> false, getSuccessTable error.LastStatus
+    |> (fun (isSuccess, table) ->
+        R.div []
+            [   R.h2 [ ClassName "title" ] [ str (if isSuccess then "Success" else "Incomplete") ]
+                table
+            ]
+    )
 
 
 let root (model: Types.Model) dispatch =
@@ -88,14 +95,20 @@ let root (model: Types.Model) dispatch =
 
     let textUpdateArea =
         R.textarea
-            [   Rows 10.0
+            [   Rows 7.0
                 Cols 80.0
                 Multiple true
                 Placeholder ""
+                Type "text"
                 Value model.CurrentText
                 AutoFocus true
                 OnChange (fun ev -> !!ev.target?value |> dispatchFunc )
+                ClassName "textarea is-focused"
             ] []
+        |> List.singleton
+        |> R.div [ ClassName "control" ]
+        |> List.singleton
+        |> R.div [ ClassName "field" ]
 
     R.div []
         [   textUpdateArea
