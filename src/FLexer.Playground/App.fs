@@ -109,12 +109,10 @@ let getParseResultWithTextArea (model: Types.Model) textAreaWithUpdate =
             [
                 R.div [ ClassName "column" ]
                     [
-                        textAreaWithUpdate
                         R.h1 [ ClassName "title" ] [ str (if isSuccess then "Success" else "Incomplete") ]
-                        R.hr []
+                        textAreaWithUpdate
                         R.h3 [ ClassName "subtitle" ] [ str "Tokens" ]
                         tokenTable
-                        R.hr []
                     ]
                 R.div [ ClassName "column is-narrow" ]
                     [
