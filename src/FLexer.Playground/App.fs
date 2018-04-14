@@ -175,11 +175,13 @@ let root (model: Types.Model) dispatch =
 
 
     R.div []
-        [   R.nav [ ClassName "navbar is-primary"; Role "navigation" ]
-                [   R.nav [ ClassName "navbar-menu" ]
-                        [   R.a [ ClassName "navbar-item"; Href "#examplesql" ] [ R.str "SQL Select"  ]
-                            R.a [ ClassName "navbar-item"; Href "#examplestringformat" ] [ R.str "String Format"  ]
-                            R.a [ ClassName "navbar-item"; Href "#examplejson" ] [ R.str "JSON"  ]
+        [   R.nav [ ClassName "navbar is-info"; Role "navigation" ]
+                [   R.div [ ClassName "navbar-menu" ]
+                        [   R.div [ ClassName "navbar-start" ]
+                                [   R.a [ ClassName "navbar-item"; Href "#examplesql" ] [ R.str "SQL Select"  ]
+                                    R.a [ ClassName "navbar-item"; Href "#examplestringformat" ] [ R.str "String Format"  ]
+                                    R.a [ ClassName "navbar-item"; Href "#examplejson" ] [ R.str "JSON"  ]
+                                ]
                         ]
                 ]
             editor
