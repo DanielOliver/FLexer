@@ -60,6 +60,7 @@ let ExampleStrings =
         false, "{}"
         true, "Hello, {@firstName}, good evening!"
         true, "{@productName} are great!"
+        true, "Hello {@firstName}, only {@productCount} {@productName} left! Order within the next {@timeDuration} to receive before {@guaranteeDate}!"
     ]
 
 let Example() =
