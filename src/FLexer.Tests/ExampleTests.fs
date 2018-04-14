@@ -20,9 +20,7 @@ type ExampleTests () =
             stringToTest
             |> FLexer.Example.Core.BasicSQL.ExampleTester
             |> (testResult shouldAccept stringToTest)
-        )    
-        
-
+        )
         
     [<Test>]
     member __.``Verify JSON Examples`` () = 
@@ -31,5 +29,14 @@ type ExampleTests () =
             stringToTest
             |> FLexer.Example.Core.JSON.ExampleTester
             |> (testResult shouldAccept stringToTest)
-        )    
+        )
+        
+    [<Test>]
+    member __.``Verify StringFormat Examples`` () = 
+        FLexer.Example.Core.StringFormat.ExampleStrings
+        |> List.iter(fun (shouldAccept, stringToTest) ->
+            stringToTest
+            |> FLexer.Example.Core.StringFormat.ExampleTester
+            |> (testResult shouldAccept stringToTest)
+        )
         

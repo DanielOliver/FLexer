@@ -23,18 +23,30 @@ let update (msg:Types.Msg) model =
         Types.Model.ExampleJSON, Cmd.Empty
     | Types.Msg.BasicExampleSQL ->
         Types.Model.ExampleSQL, Cmd.Empty
+    | Types.Msg.BasicExampleStringFormat ->
+        Types.Model.ExampleStringFormat, Cmd.Empty
+
     | Types.Msg.ExampleJSON jsonText ->
         {
             ParseResult = Types.ParseResult.JSONParse (FLexer.Example.Core.JSON.ExampleTester <| jsonText.Trim())
             CurrentText = jsonText
             CurrentPage = Types.Page.ExampleJSON
         }, Cmd.Empty
+
     | Types.Msg.ExampleSQL sqlText ->
         {
             ParseResult = Types.ParseResult.SQLParse (FLexer.Example.Core.BasicSQL.ExampleTester <| sqlText.Trim())
             CurrentText = sqlText
             CurrentPage = Types.Page.ExampleSQL
         }, Cmd.Empty
+
+    | Types.Msg.ExampleStringFormat stringFormatText ->
+        {
+            ParseResult = Types.ParseResult.StringFormatParse (FLexer.Example.Core.StringFormat.ExampleTester <| stringFormatText.Trim())
+            CurrentText = stringFormatText
+            CurrentPage = Types.Page.ExampleStringFormat
+        }, Cmd.Empty
+
 
 let createTokenTableFromRows rows =
     [   R.thead []
@@ -104,6 +116,11 @@ let getParseResultWithTextArea (model: Types.Model) textAreaWithUpdate =
         match result with
         | Ok(sqlResult, status) -> true, getTokenTable status, getTextTable status
         | Error(error) -> false, getTokenTable error.LastStatus, getTextTable error.LastStatus
+    | Types.ParseResult.StringFormatParse result ->
+        match result with
+        | Ok(parseResult, status) -> true, getTokenTable status, getTextTable status
+        | Error(error) -> false, getTokenTable error.LastStatus, getTextTable error.LastStatus
+
     |> (fun (isSuccess, tokenTable, textTable) ->
         R.div [ ClassName "columns is-desktop" ]
             [
@@ -130,6 +147,7 @@ let root (model: Types.Model) dispatch =
         match model.CurrentPage with
         | Types.Page.ExampleJSON -> text |> Types.Msg.ExampleJSON |> dispatch
         | Types.Page.ExampleSQL -> text |> Types.Msg.ExampleSQL |> dispatch
+        | Types.Page.ExampleStringFormat -> text |> Types.Msg.ExampleStringFormat |> dispatch
 
     let textUpdateArea =
         R.textarea
@@ -148,11 +166,24 @@ let root (model: Types.Model) dispatch =
         |> List.singleton
         |> R.div [ ClassName "field" ]
 
-    getParseResultWithTextArea model textUpdateArea
-    |> List.singleton
-    |> R.div [ ClassName "container content is-fluid" ]
-    |> List.singleton
-    |> R.section [ ClassName "section" ]
+    let editor = 
+        getParseResultWithTextArea model textUpdateArea
+        |> List.singleton
+        |> R.div [ ClassName "container content is-fluid" ]
+        |> List.singleton
+        |> R.section [ ClassName "section" ]
+
+
+    R.div []
+        [   R.nav [ ClassName "navbar is-primary"; Role "navigation" ]
+                [   R.nav [ ClassName "navbar-menu" ]
+                        [   R.a [ ClassName "navbar-item"; Href "#examplesql" ] [ R.str "SQL Select"  ]
+                            R.a [ ClassName "navbar-item"; Href "#examplestringformat" ] [ R.str "String Format"  ]
+                            R.a [ ClassName "navbar-item"; Href "#examplejson" ] [ R.str "JSON"  ]
+                        ]
+                ]
+            editor
+        ]
 
 
 

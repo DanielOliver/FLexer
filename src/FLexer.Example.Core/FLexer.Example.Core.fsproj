@@ -8,6 +8,7 @@
     <Compile Include="Utility.fs" />
     <Compile Include="BasicSQL.fs" />
     <Compile Include="JSON.fs" />
+    <Compile Include="StringFormat.fs" />
   </ItemGroup>
 
   <ItemGroup>

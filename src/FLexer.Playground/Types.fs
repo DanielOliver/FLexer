@@ -7,17 +7,21 @@ open FLexer.Example.Core.BasicSQL
 type Page =
     | ExampleJSON
     | ExampleSQL
+    | ExampleStringFormat
 
 type Msg =
     | BasicExampleJSON
     | BasicExampleSQL
+    | BasicExampleStringFormat
     | ExampleJSON of string
     | ExampleSQL of string
+    | ExampleStringFormat of string
 
 
 type ParseResult =
     | JSONParse of ClassifierBuilderResult<JsonValue, JsonValue>
     | SQLParse of ClassifierBuilderResult<TokenType, SQLQuery>
+    | StringFormatParse of ClassifierBuilderResult<string, FLexer.Example.Core.StringFormat.Tree>
 
 type Model =
     {   CurrentPage: Page
@@ -37,4 +41,11 @@ type Model =
         {   CurrentPage = Page.ExampleSQL
             CurrentText = exampleText
             ParseResult = ParseResult.SQLParse (FLexer.Example.Core.BasicSQL.ExampleTester exampleText)
+        }
+
+    static member ExampleStringFormat =
+        let exampleText = FLexer.Example.Core.StringFormat.ExampleStrings |> List.choose(fun (shouldBeTrue,json) -> if shouldBeTrue then Some json else None) |> List.sortByDescending(fun t -> t.Length) |> List.head
+        {   CurrentPage = Page.ExampleStringFormat
+            CurrentText = exampleText
+            ParseResult = ParseResult.StringFormatParse (FLexer.Example.Core.StringFormat.ExampleTester exampleText)
         }
