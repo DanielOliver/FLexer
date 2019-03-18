@@ -272,6 +272,10 @@ let Example() =
 //         43  |          50  |              Contacts  |  TableName "Contacts"
 ```
 
+## Known issues
+
+* Complex scenarios may have stackoverflow because of a missed tail-call optimization.  Documentation of these scenarios and a fix needed.
+
 ## Authors
 
 * **Daniel Oliver** - *Initial work* - [DanielOliver](https://github.com/DanielOliver)
