@@ -30,7 +30,7 @@ type Model =
     }
 
     static member ExampleJSON =
-        let exampleText = FLexer.Example.Core.JSON.ExampleStrings |> List.choose(fun (shouldBeTrue,json) -> if shouldBeTrue then Some json else None) |> List.sortByDescending(fun t -> t.Length) |> List.head
+        let exampleText = FLexer.Example.Core.JSON.ExampleStrings |> List.choose(fun (shouldBeTrue,json) -> if shouldBeTrue && json.Length > 15 then Some json else None) |> List.sortBy(fun t -> t.Length) |> List.head
         {   CurrentPage = Page.ExampleJSON
             CurrentText = exampleText
             ParseResult = ParseResult.JSONParse (FLexer.Example.Core.JSON.ExampleTester exampleText)
